@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-navy-950: #060E1B;
+  --color-navy-900: #0A1628;
+  --color-navy-800: #0F2140;
+  --color-navy-700: #1A2D4A;
+  --color-navy-600: #243B5C;
+  --color-navy-500: #2E496E;
+  --color-navy-400: #4A6A8E;
+
+  --color-gold-600: #B89A3E;
+  --color-gold-500: #C8A84E;
+  --color-gold-400: #D4AF37;
+  --color-gold-300: #E8C547;
+  --color-gold-200: #F0D86A;
+  --color-gold-100: #FBF0C4;
+  --color-gold-50: #FFF9EB;
+
+  --color-cream: #FFFDF5;
+
+  --font-heading: var(--font-plus-jakarta);
+  --font-body: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0A1628;
+}
+::-webkit-scrollbar-thumb {
+  background: #C8A84E;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+
+/* Smooth section transitions */
+section {
+  scroll-margin-top: 80px;
+}
+
+/* Input focus ring */
+input:focus,
+select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #D4AF37;
+}
+
+/* Animated gradient for hero */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.gold-shimmer {
+  background: linear-gradient(90deg, #C8A84E, #E8C547, #F0D86A, #E8C547, #C8A84E);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Pulse animation for CTA */
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
+}
+
+.pulse-cta {
+  animation: pulse-gold 2s ease-in-out infinite;
 }
