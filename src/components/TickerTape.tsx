@@ -16,6 +16,7 @@ export default function TickerTape() {
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/tv.js";
     script.async = true;
+
     script.onload = () => {
       setTimeout(() => {
         try {
@@ -43,11 +44,14 @@ export default function TickerTape() {
         }
       }, 100);
     };
+
     container.appendChild(script);
 
     return () => {
       loaded.current = false;
-      if (container) container.innerHTML = "";
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
     };
   }, []);
 

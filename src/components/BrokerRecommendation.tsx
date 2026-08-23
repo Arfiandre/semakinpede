@@ -11,7 +11,7 @@ import AnimateOnScroll from "./AnimateOnScroll";
 
 const brokers = [
   {
-    name: " Broker A",
+    name: "Broker A",
     tagline: "Spread Rendah & Eksekusi Cepat",
     features: [
       "Spread mulai 0.1 pip",

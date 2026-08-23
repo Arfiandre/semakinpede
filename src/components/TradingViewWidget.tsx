@@ -19,6 +19,7 @@ export default function TradingViewWidget({
 }: TradingViewWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<boolean>(false);
+  const scriptRef = useRef<HTMLScriptElement | null>(null);
 
   useEffect(() => {
     if (widgetRef.current || !containerRef.current) return;
@@ -27,21 +28,21 @@ export default function TradingViewWidget({
     const container = containerRef.current;
     const containerId = container.id;
 
-    // Load TradingView script
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/tv.js";
     script.async = true;
+    scriptRef.current = script;
+
     script.onload = () => {
       if (typeof window.TradingView !== "undefined") {
-        // Small delay to ensure DOM is ready
         setTimeout(() => {
           try {
             new window.TradingView.widget({
               autosize: true,
-              symbol: symbol,
-              interval: interval,
+              symbol,
+              interval,
               timezone: "Asia/Jakarta",
-              theme: theme,
+              theme,
               style: "1",
               locale: "id",
               toolbar_bg: "#0F2140",
@@ -54,17 +55,18 @@ export default function TradingViewWidget({
               show_popup_button: false,
             });
           } catch {
-            console.warn("TradingView widget init failed, retrying...");
+            console.warn("TradingView widget init failed");
           }
         }, 100);
       }
     };
+
     container.appendChild(script);
 
     return () => {
       widgetRef.current = false;
-      if (container) {
-        container.innerHTML = "";
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
       }
     };
   }, [symbol, interval, theme]);

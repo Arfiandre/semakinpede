@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircle, Send, Quote, Star, ExternalLink } from "lucide-react";
+import { MessageCircle, Send, Quote, Star } from "lucide-react";
 import AnimateOnScroll from "./AnimateOnScroll";
 
 const testimonials = [

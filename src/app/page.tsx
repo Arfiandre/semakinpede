@@ -6,9 +6,11 @@ import MarketCenter from "@/components/MarketCenter";
 import LearningPaths from "@/components/LearningPaths";
 import TradingJournal from "@/components/TradingJournal";
 import BrokerRecommendation from "@/components/BrokerRecommendation";
+import FAQSection from "@/components/FAQSection";
 import Testimonials from "@/components/Testimonials";
 import Footer from "@/components/Footer";
 import MobileStickyForm from "@/components/MobileStickyForm";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import AnimateOnScroll from "@/components/AnimateOnScroll";
 
 export default function Home() {
@@ -47,17 +49,23 @@ export default function Home() {
           <BrokerRecommendation />
         </AnimateOnScroll>
 
-        {/* Section 7: Testimoni + Komunitas */}
+        {/* Section 7: FAQ */}
+        <FAQSection />
+
+        {/* Section 8: Testimoni + Komunitas */}
         <Testimonials />
       </main>
 
-      {/* Section 8: Footer + Form Ulang */}
+      {/* Section 9: Footer + Form Ulang */}
       <AnimateOnScroll animation="fade-up">
         <Footer />
       </AnimateOnScroll>
 
       {/* Mobile Sticky Form */}
       <MobileStickyForm />
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppButton />
     </>
   );
 }

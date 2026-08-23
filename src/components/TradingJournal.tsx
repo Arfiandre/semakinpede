@@ -12,7 +12,7 @@ const leaderboard = [
 ];
 
 const heatmapData = [
-  // Minggu 1-12, hari Senin-Jumat, warna merah (rugi) ke hijau (untung)
+  // Minggu 1-8, hari Senin-Jumat, warna merah (rugi) ke hijau (untung)
   [2, 3, -1, 4, 2],
   [-1, 2, 5, -2, 3],
   [3, -1, 2, 4, 1],
@@ -96,6 +96,8 @@ export default function TradingJournal() {
                         key={di}
                         className={`flex-1 h-7 rounded ${getHeatColor(day)} transition-colors`}
                         title={`Minggu ${wi + 1}, Hari ${di + 1}: ${day > 0 ? "+" : ""}${day}`}
+                        role="gridcell"
+                        aria-label={`Minggu ${wi + 1}, Hari ${di + 1}: ${day > 0 ? "untung" : "rugi"}`}
                       />
                     ))}
                   </div>

@@ -71,6 +71,8 @@ export default function Navbar() {
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
             aria-label="Toggle menu"
+            aria-expanded={isOpen}
+            aria-controls="mobile-menu"
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -79,6 +81,8 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       <div
+        id="mobile-menu"
+        role="menu"
         className={`md:hidden transition-all duration-300 overflow-hidden ${
           isOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
         }`}
