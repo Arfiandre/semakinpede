@@ -37,6 +37,11 @@
       border-radius: 9999px;
       font-weight: 700;
     }
+    .tab-active {
+      background-color: #1e3a8a !important;
+      color: #93c5fd !important;
+      border-color: #3b82f6 !important;
+    }
   </style>
 </head>
 <body class="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
@@ -47,23 +52,49 @@
       <div>
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-3">
           <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
-          Production Deployment Manual
+          Production Deployment Manual • Updated
         </div>
         <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
           Deployment Guide: <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400">Semakin Pede</span>
         </h1>
         <p class="text-gray-400 text-sm md:text-base mt-2">
-          Panduan langkah demi langkah implementasi stack <span class="text-white font-medium">Laravel + Inertia (React)</span> pada <span class="text-white font-medium">Ubuntu VPS</span> dengan Nginx, MySQL, dan PHP 8.3-FPM.
+          Panduan langkah demi langkah implementasi stack <span class="text-white font-medium">Laravel + Inertia (React)</span> pada <span class="text-white font-medium">Ubuntu VPS</span> lengkap dengan <span class="text-amber-400 font-medium">Solusi Port Conflict (Multi-Project)</span>.
         </p>
       </div>
       <div class="flex flex-col gap-2 text-xs text-gray-300 bg-gray-900/80 p-4 rounded-xl border border-gray-800">
         <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> <strong>OS:</strong> Ubuntu 22.04 / 24.04 LTS</div>
         <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> <strong>Runtime:</strong> PHP 8.3 FPM + Composer</div>
-        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> <strong>Web Server:</strong> Nginx</div>
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> <strong>Web Server:</strong> Nginx (Port 80/443 atau Custom Port 8080/8081)</div>
         <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> <strong>Database:</strong> MySQL / MariaDB</div>
       </div>
     </div>
   </header>
+
+  <!-- Port Conflict Special Alert Banner -->
+  <section class="bg-amber-950/30 border border-amber-600/40 rounded-2xl p-6 shadow-lg">
+    <div class="flex items-start gap-4">
+      <div class="p-3 bg-amber-500/20 text-amber-400 rounded-xl text-xl font-bold">⚡</div>
+      <div class="flex-1 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-bold text-amber-200">Panduan Khusus: Solusi Menabrak Port Project Lain</h2>
+          <span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">Multi-Site / Co-Existence</span>
+        </div>
+        <p class="text-gray-300 text-xs md:text-sm leading-relaxed">
+          Jika VPS Anda sudah menjalankan project lain (misal Apache, Docker container, atau aplikasi Node.js/Python yang memakai Port 80/443), Anda memiliki <strong>2 pilihan solusi</strong>:
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
+          <div class="bg-gray-950/70 p-3 rounded-lg border border-amber-900/40">
+            <span class="text-amber-400 font-bold block mb-1">Opsi A: Gunakan Custom Port (contoh: Port 8080)</span>
+            Ubah Nginx agar mendengar di <code class="text-gray-200">listen 8080;</code>, buka firewall UFW (<code class="text-gray-200">sudo ufw allow 8080/tcp</code>), dan sesuaikan <code class="text-gray-200">APP_URL</code>.
+          </div>
+          <div class="bg-gray-950/70 p-3 rounded-lg border border-amber-900/40">
+            <span class="text-blue-400 font-bold block mb-1">Opsi B: Nginx Virtual Host (Satu Port, Beda Domain)</span>
+            Jika project lain juga berjalan di Nginx, Anda <strong>tidak perlu beda port</strong>. Cukup bedakan <code class="text-gray-200">server_name</code> (misal <code class="text-gray-200">domain-a.com</code> & <code class="text-gray-200">domain-b.com</code>).
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- Architecture Flowchart -->
   <section class="bg-gray-900/70 border border-gray-800 rounded-2xl p-6 shadow-md">
@@ -75,13 +106,13 @@
       <div class="bg-gray-800/80 border border-gray-700/60 p-4 rounded-xl flex flex-col justify-center items-center">
         <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg mb-2">🌐 Klien / Browser</div>
         <div class="font-semibold text-white">Pengunjung Web</div>
-        <div class="text-gray-400 mt-1">HTTPS (Port 443)</div>
+        <div class="text-gray-400 mt-1">Port 80/443 atau Port 8080</div>
       </div>
       <div class="flex items-center justify-center text-gray-500 font-bold text-lg hidden md:flex">➔</div>
       <div class="bg-gray-800/80 border border-indigo-900/50 p-4 rounded-xl flex flex-col justify-center items-center">
         <div class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg mb-2">🛡️ Nginx Web Server</div>
-        <div class="font-semibold text-white">Reverse Proxy & SSL</div>
-        <div class="text-gray-400 mt-1">Let's Encrypt Certbot</div>
+        <div class="font-semibold text-white">Reverse Proxy & VHost</div>
+        <div class="text-gray-400 mt-1">listen 80 / 8080</div>
       </div>
       <div class="flex items-center justify-center text-gray-500 font-bold text-lg hidden md:flex">➔</div>
       <div class="bg-gray-800/80 border border-emerald-900/50 p-4 rounded-xl flex flex-col justify-center items-center">
@@ -98,6 +129,34 @@
           <span class="text-amber-400 font-semibold">🗄️ Database:</span>
           <code class="text-gray-300 ml-1">semakinpede</code> via MySQL Socket / TCP 127.0.0.1:3306
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Diagnostic: How to detect conflicting ports -->
+  <section class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md">
+    <div class="flex items-start gap-4">
+      <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl font-bold">🔍</div>
+      <div class="flex-1">
+        <h3 class="text-lg font-bold text-white">Langkah 0: Diagnosa Port Yang Sedang Bertabrakan</h3>
+        <p class="text-gray-400 text-sm mt-1">
+          Jalankan perintah ini di terminal server untuk melihat service apa yang sedang memakai port 80, 443, atau port lainnya:
+        </p>
+
+        <div class="code-block p-4 mt-3">
+          <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+          <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># 1. Cek port yang sedang aktif digunakan di server
+sudo ss -tulpn | grep -E ':(80|443|8080|8081|3306|5000|3000)'
+
+# 2. Atau cek secara spesifik proses yang menguasai Port 80
+sudo lsof -i :80
+
+# 3. Cek apakah ada Apache yang tidak sengaja berjalan
+sudo systemctl status apache2</code></pre>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">
+          💡 <em>Jika yang muncul adalah <code>apache2</code> dan Anda hanya ingin memakai Nginx, matikan Apache dengan: <code>sudo systemctl stop apache2 && sudo systemctl disable apache2</code>.</em>
+        </p>
       </div>
     </div>
   </section>
@@ -171,7 +230,7 @@ EXIT;</code></pre>
         <div class="flex-1">
           <h3 class="text-lg font-bold text-white">Ambil Source Code & Konfigurasi .env</h3>
           <p class="text-gray-400 text-sm mt-1">
-            Clone repository dari GitHub, pasang paket PHP via Composer, dan atur kredensial production.
+            Clone repository dari GitHub, pasang paket PHP via Composer, dan atur kredensial production serta port URL.
           </p>
 
           <div class="code-block p-4 mt-3">
@@ -193,15 +252,16 @@ nano .env</code></pre>
           </div>
 
           <div class="mt-3 bg-gray-950 p-3 rounded-lg border border-gray-800 text-xs">
-            <span class="text-emerald-400 font-semibold">Pastikan variabel kunci pada .env sudah disetel:</span>
-            <div class="mt-1 font-mono text-gray-300">
-              APP_ENV=production<br>
-              APP_DEBUG=false<br>
-              APP_URL=https://domainanda.com<br>
-              DB_CONNECTION=mysql<br>
-              DB_DATABASE=semakinpede<br>
-              DB_USERNAME=semakinpede_user<br>
-              DB_PASSWORD=GANTI_PASSWORD_KUAT
+            <span class="text-emerald-400 font-semibold">Penyesuaian variabel kunci pada .env (Perhatikan APP_URL jika memakai Custom Port):</span>
+            <div class="mt-1 font-mono text-gray-300 space-y-1">
+              <div>APP_ENV=production</div>
+              <div>APP_DEBUG=false</div>
+              <div class="text-amber-300"># Jika pakai Port Standar 80/443: APP_URL=https://domainanda.com</div>
+              <div class="text-amber-300"># Jika pakai Custom Port 8080:    APP_URL=http://domainanda.com:8080  (atau http://IP_VPS:8080)</div>
+              <div>DB_CONNECTION=mysql</div>
+              <div>DB_DATABASE=semakinpede</div>
+              <div>DB_USERNAME=semakinpede_user</div>
+              <div>DB_PASSWORD=GANTI_PASSWORD_KUAT</div>
             </div>
           </div>
         </div>
@@ -264,22 +324,46 @@ sudo chmod -R 775 /var/www/semakinpede/storage /var/www/semakinpede/bootstrap/ca
       </div>
     </div>
 
-    <!-- Step 6 -->
+    <!-- Step 6 (Nginx Configuration with Port Selection) -->
     <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
       <div class="flex items-start gap-4">
         <span class="badge-step bg-blue-500/20 text-blue-400 border border-blue-500/40">6</span>
         <div class="flex-1">
-          <h3 class="text-lg font-bold text-white">Konfigurasi Virtual Host Nginx</h3>
-          <p class="text-gray-400 text-sm mt-1">
-            Buat file vhost Nginx baru di <code class="text-blue-300">/etc/nginx/sites-available/semakinpede</code>.
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <h3 class="text-lg font-bold text-white">Konfigurasi Virtual Host Nginx & Penanganan Port</h3>
+            <span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/40">Pilih Konfigurasi Sesuai Port</span>
+          </div>
+          
+          <p class="text-gray-400 text-sm mb-4">
+            Pilih opsi konfigurasi di bawah tergantung apakah Anda ingin menggunakan <strong>Custom Port (8080)</strong> agar tidak menabrak port lain, atau <strong>Port Standar (80/443)</strong>:
           </p>
 
-          <div class="code-block p-4 mt-3">
-            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
-            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code>server {
-    listen 80;
-    listen [::]:80;
-    server_name domainanda.com www.domainanda.com;
+          <!-- Tab Selector -->
+          <div class="flex gap-2 border-b border-gray-800 pb-3 mb-4">
+            <button id="btn-custom-port" onclick="switchTab('custom')" class="px-4 py-2 rounded-lg text-xs font-bold border transition tab-active">
+              Opsi 1: Custom Port 8080 (Solusi Port Conflict) ⚡
+            </button>
+            <button id="btn-standard-port" onclick="switchTab('standard')" class="px-4 py-2 rounded-lg text-xs font-bold border border-gray-700 text-gray-400 hover:text-white transition">
+              Opsi 2: Port Standar 80/443 (Multi-Domain)
+            </button>
+          </div>
+
+          <!-- Tab 1: Custom Port 8080 -->
+          <div id="tab-custom" class="space-y-3">
+            <div class="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/40 p-3 rounded-lg">
+              <strong>Gunakan opsi ini jika:</strong> Port 80 di VPS Anda sudah dipakai oleh Apache, Docker, atau aplikasi lain. Nginx akan mendengarkan di Port <strong>8080</strong> (atau ganti ke 8081).
+            </div>
+
+            <div class="code-block p-4">
+              <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+              <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Simpan di: sudo nano /etc/nginx/sites-available/semakinpede
+
+server {
+    # Nginx mendengarkan di Port Kustom 8080 (bukan port 80)
+    listen 8080;
+    listen [::]:8080;
+    
+    server_name domainanda.com www.domainanda.com _;
 
     root /var/www/semakinpede/public;
     index index.php index.html;
@@ -309,17 +393,78 @@ sudo chmod -R 775 /var/www/semakinpede/storage /var/www/semakinpede/bootstrap/ca
         deny all;
     }
 }</code></pre>
+            </div>
+
+            <div class="mt-3">
+              <span class="text-xs font-semibold text-emerald-400">Wajib: Buka Port 8080 di Firewall Ubuntu (UFW)</span>
+              <div class="code-block p-3 mt-1">
+                <button onclick="copyCode(this)" class="absolute top-2.5 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+                <pre class="text-xs text-gray-200 overflow-x-auto leading-relaxed"><code># Buka akses port 8080 di firewall
+sudo ufw allow 8080/tcp
+sudo ufw reload</code></pre>
+              </div>
+            </div>
           </div>
 
-          <p class="text-xs text-gray-400 mt-3">Aktifkan konfigurasi dan reload Nginx:</p>
-          <div class="code-block p-4 mt-2">
-            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
-            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Aktifkan site & matikan default
-sudo ln -s /etc/nginx/sites-available/semakinpede /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
+          <!-- Tab 2: Standard Port 80/443 -->
+          <div id="tab-standard" class="space-y-3 hidden">
+            <div class="text-xs text-blue-300 bg-blue-950/40 border border-blue-800/40 p-3 rounded-lg">
+              <strong>Gunakan opsi ini jika:</strong> Semua project Anda berjalan di dalam Nginx yang sama. Cukup bedakan <code>server_name</code> domain masing-masing.
+            </div>
 
-# Validasi & reload
+            <div class="code-block p-4">
+              <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+              <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Simpan di: sudo nano /etc/nginx/sites-available/semakinpede
+
+server {
+    listen 80;
+    listen [::]:80;
+    
+    # Bedakan nama domain dengan project lain agar tidak bentrok
+    server_name semakinpede.com www.semakinpede.com;
+
+    root /var/www/semakinpede/public;
+    index index.php index.html;
+    charset utf-8;
+
+    client_max_body_size 64M;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}</code></pre>
+            </div>
+          </div>
+
+          <!-- Common Activation Command -->
+          <div class="mt-4 pt-3 border-t border-gray-800">
+            <p class="text-xs text-gray-400 mb-2">Aktifkan konfigurasi di Ubuntu dan reload Nginx:</p>
+            <div class="code-block p-3">
+              <button onclick="copyCode(this)" class="absolute top-2.5 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+              <pre class="text-xs text-gray-200 overflow-x-auto leading-relaxed"><code># Buat symlink dari sites-available ke sites-enabled
+sudo ln -s /etc/nginx/sites-available/semakinpede /etc/nginx/sites-enabled/
+
+# Tes syntax & terapkan konfigurasi
 sudo nginx -t && sudo systemctl reload nginx</code></pre>
+            </div>
           </div>
         </div>
       </div>
@@ -332,7 +477,7 @@ sudo nginx -t && sudo systemctl reload nginx</code></pre>
         <div class="flex-1">
           <h3 class="text-lg font-bold text-white">Pasang SSL / HTTPS Gratis (Let's Encrypt Certbot)</h3>
           <p class="text-gray-400 text-sm mt-1">
-            Amankan domain Anda dengan sertifikat SSL gratis dan perpanjangan otomatis.
+            Amankan domain Anda dengan sertifikat SSL gratis (Hanya berlaku untuk Opsi Port 80/443 standar dengan domain aktif).
           </p>
 
           <div class="code-block p-4 mt-3">
@@ -376,29 +521,50 @@ php artisan optimize</code></pre>
       </h4>
       <ul class="space-y-2 text-xs text-gray-300">
         <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> PHP 8.3 CLI & FPM aktif</li>
-        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> Root Nginx diarahkan ke <code class="text-gray-400">/public</code></li>
+        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> Port Nginx tidak bentrok (Port 80/443 atau 8080 terbuka)</li>
+        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> Firewall UFW mengizinkan port web (<code class="text-gray-400">ufw allow 8080/tcp</code>)</li>
         <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> Izin folder <code class="text-gray-400">storage</code> berstatus 775 untuk <code class="text-gray-400">www-data</code></li>
         <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> <code class="text-gray-400">.env</code> mode <code class="text-emerald-400">APP_DEBUG=false</code></li>
-        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> Aset Frontend selesai dibuild via <code class="text-gray-400">npm run build</code></li>
       </ul>
     </div>
 
     <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl">
       <h4 class="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
-        <span class="text-amber-400">⚠️</span> Quick Troubleshooting Tips
+        <span class="text-amber-400">⚠️</span> Troubleshooting Port & Error Umum
       </h4>
       <div class="space-y-2 text-xs text-gray-400">
-        <div><strong class="text-red-400">502 Bad Gateway:</strong> Socket PHP-FPM tidak cocok atau mati. Jalankan <code class="text-gray-300">sudo systemctl status php8.3-fpm</code>.</div>
-        <div><strong class="text-amber-400">403 Forbidden:</strong> Hak akses folder atau direktori root salah. Pastikan mengarah ke <code class="text-gray-300">/public</code>.</div>
+        <div><strong class="text-red-400">bind() to 0.0.0.0:80 failed (98: Address already in use):</strong> Port 80 sudah dipakai Apache/service lain. Ganti listen port Nginx ke <code>8080</code> atau matikan service yang bertabrakan.</div>
+        <div><strong class="text-yellow-400">Website tidak bisa dibuka di port 8080:</strong> Pastikan port 8080 sudah dibuka di firewall: <code>sudo ufw allow 8080/tcp</code> dan security group cloud (jika pakai AWS/DigitalOcean/GCP).</div>
+        <div><strong class="text-blue-400">502 Bad Gateway:</strong> Socket PHP-FPM tidak cocok atau belum aktif. Cek status: <code>sudo systemctl status php8.3-fpm</code>.</div>
         <div><strong class="text-purple-400">Cek Log Error Realtime:</strong><br>
-          <code class="text-gray-300">sudo tail -f /var/log/nginx/semakinpede_error.log</code><br>
-          <code class="text-gray-300">tail -f /var/www/semakinpede/storage/logs/laravel.log</code>
+          <code class="text-gray-300">sudo tail -f /var/log/nginx/error.log</code>
         </div>
       </div>
     </div>
   </footer>
 
   <script>
+    function switchTab(type) {
+      const tabCustom = document.getElementById('tab-custom');
+      const tabStandard = document.getElementById('tab-standard');
+      const btnCustom = document.getElementById('btn-custom-port');
+      const btnStandard = document.getElementById('btn-standard-port');
+
+      if (type === 'custom') {
+        tabCustom.classList.remove('hidden');
+        tabStandard.classList.add('hidden');
+        btnCustom.classList.add('tab-active');
+        btnStandard.classList.remove('tab-active');
+        btnStandard.classList.add('border-gray-700', 'text-gray-400');
+      } else {
+        tabStandard.classList.remove('hidden');
+        tabCustom.classList.add('hidden');
+        btnStandard.classList.add('tab-active');
+        btnCustom.classList.remove('tab-active');
+        btnCustom.classList.add('border-gray-700', 'text-gray-400');
+      }
+    }
+
     function copyCode(btn) {
       const codeElement = btn.parentElement.querySelector('code');
       const text = codeElement.innerText;
