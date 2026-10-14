@@ -359,9 +359,9 @@ sudo chmod -R 775 /var/www/semakinpede/storage /var/www/semakinpede/bootstrap/ca
               <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Simpan di: sudo nano /etc/nginx/sites-available/semakinpede
 
 server {
-    # Nginx mendengarkan di Port Kustom 8080 (bukan port 80)
-    listen 8080;
-    listen [::]:8080;
+    # Nginx mendengarkan di Port Kustom 8081 (atau 8080)
+    listen 8081;
+    # listen [::]:8081; # Hapus/nonaktifkan jika muncul error 97 (IPv6 disabled di VPS)
     
     server_name domainanda.com www.domainanda.com _;
 
@@ -418,7 +418,7 @@ sudo ufw reload</code></pre>
 
 server {
     listen 80;
-    listen [::]:80;
+    # listen [::]:80; # Nonaktifkan jika IPv6 tidak aktif di VPS (mencegah error 97)
     
     # Bedakan nama domain dengan project lain agar tidak bentrok
     server_name semakinpede.com www.semakinpede.com;
@@ -536,6 +536,7 @@ php artisan optimize</code></pre>
         <div><strong class="text-red-400">bind() to 0.0.0.0:80 failed (98: Address already in use):</strong> Port 80 sudah dipakai Apache/service lain. Ganti listen port Nginx ke <code>8080</code> atau matikan service yang bertabrakan.</div>
         <div><strong class="text-yellow-400">Website tidak bisa dibuka di port 8080:</strong> Pastikan port 8080 sudah dibuka di firewall: <code>sudo ufw allow 8080/tcp</code> dan security group cloud (jika pakai AWS/DigitalOcean/GCP).</div>
         <div><strong class="text-blue-400">502 Bad Gateway:</strong> Socket PHP-FPM tidak cocok atau belum aktif. Cek status: <code>sudo systemctl status php8.3-fpm</code>.</div>
+        <div><strong class="text-rose-400">socket() [::]:XXXX failed (97: Unknown error):</strong> VPS Anda tidak mengaktifkan modul IPv6 di kernel Linux. <strong>Solusi:</strong> Hapus atau beri tanda komentar (<code>#</code>) pada baris <code>listen [::]:...;</code> di konfigurasi Nginx.</div>
         <div><strong class="text-purple-400">Cek Log Error Realtime:</strong><br>
           <code class="text-gray-300">sudo tail -f /var/log/nginx/error.log</code>
         </div>
