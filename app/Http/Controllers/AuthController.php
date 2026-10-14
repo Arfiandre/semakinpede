@@ -103,4 +103,53 @@ class AuthController extends Controller
 
         return redirect()->route('home');
     }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|max:100',
+            'new_username' => 'nullable|string|min:3|max:50',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!\Illuminate\Support\Facades\Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kata sandi saat ini tidak cocok.',
+            ], 422);
+        }
+
+        $user->password = \Illuminate\Support\Facades\Hash::make($validated['new_password']);
+
+        if (!empty($validated['new_username']) && $validated['new_username'] !== $user->username) {
+            $cleanedUsername = trim(strip_tags($validated['new_username']));
+            $exists = \App\Models\User::where('username', $cleanedUsername)->where('id', '!=', $user->id)->exists();
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Username baru sudah digunakan oleh akun lain.',
+                ], 422);
+            }
+            $user->username = $cleanedUsername;
+        }
+
+        $user->save();
+
+        AuditLog::create([
+            'id' => 'audit-' . Str::uuid(),
+            'action' => 'superadmin_password_changed',
+            'details' => 'Kata sandi / kredensial superadmin berhasil diperbarui',
+            'operator' => $user->username,
+            'timestamp' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kredensial superadmin berhasil diperbarui.',
+            'username' => $user->username,
+        ]);
+    }
 }

@@ -73,8 +73,31 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
     setIsLoading(true);
 
     try {
-      // Delay halus 250ms untuk feel keamanan dan mencegah brute-force instan
-      await new Promise((r) => setTimeout(r, 250));
+      if (typeof window !== "undefined" && (window as any).axios) {
+        try {
+          const resp = await (window as any).axios.post("/admin/login", {
+            username: username.trim(),
+            password,
+            remember: rememberMe,
+          });
+          if (resp.data && resp.data.success) {
+            await authenticateSuperadmin(username, password, rememberMe);
+            onSuccess();
+            return;
+          }
+        } catch (serverErr: any) {
+          if (serverErr.response?.status === 429) {
+            setErrorMessage("Terlalu banyak percobaan login. Akun diamankan sementara, coba lagi dalam 1 menit.");
+            setIsLoading(false);
+            return;
+          }
+          if (serverErr.response?.data?.message) {
+            setErrorMessage(serverErr.response.data.message);
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
 
       const res = await authenticateSuperadmin(username, password, rememberMe);
 

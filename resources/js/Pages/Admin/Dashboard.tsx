@@ -295,9 +295,15 @@ export default function AdminPage() {
               {/* Tombol Logout */}
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   if (confirm("Keluar dari sesi superadmin?")) {
+                    try {
+                      if (typeof window !== "undefined" && (window as any).axios) {
+                        await (window as any).axios.post("/admin/logout");
+                      }
+                    } catch {}
                     logoutSuperadmin();
+                    window.location.href = "/admin/login";
                   }
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 hover:text-rose-200 text-xs font-semibold rounded-xl transition-colors"

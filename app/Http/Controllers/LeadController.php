@@ -19,27 +19,27 @@ class LeadController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:100',
             'contactType' => 'nullable|string|in:wa,telegram,email',
-            'contact_type' => 'nullable|string',
-            'contact' => 'required|string|max:255',
-            'level' => 'nullable|string|max:100',
+            'contact_type' => 'nullable|string|in:wa,telegram,email',
+            'contact' => 'required|string|max:100',
+            'level' => 'nullable|string|max:50',
             'source' => 'nullable|string|max:100',
-            'notes' => 'nullable|string',
-            'eventId' => 'nullable|string',
-            'event_id' => 'nullable|string',
-            'eventTitle' => 'nullable|string',
-            'event_title' => 'nullable|string',
-            'hasAccount' => 'nullable|string',
-            'has_account' => 'nullable|string',
-            'demoAccountNumber' => 'nullable|string',
-            'demo_account_number' => 'nullable|string',
-            'demoInvestorPassword' => 'nullable|string',
-            'demo_investor_password' => 'nullable|string',
-            'screenshotRealAccount' => 'nullable|string',
-            'screenshot_real_account' => 'nullable|string',
-            'screenshotTransfer' => 'nullable|string',
-            'screenshot_transfer' => 'nullable|string',
+            'notes' => 'nullable|string|max:2000',
+            'eventId' => 'nullable|string|max:100',
+            'event_id' => 'nullable|string|max:100',
+            'eventTitle' => 'nullable|string|max:255',
+            'event_title' => 'nullable|string|max:255',
+            'hasAccount' => 'nullable|string|in:sudah,belum',
+            'has_account' => 'nullable|string|in:sudah,belum',
+            'demoAccountNumber' => 'nullable|string|max:50',
+            'demo_account_number' => 'nullable|string|max:50',
+            'demoInvestorPassword' => 'nullable|string|max:50',
+            'demo_investor_password' => 'nullable|string|max:50',
+            'screenshotRealAccount' => 'nullable|string|max:3000000',
+            'screenshot_real_account' => 'nullable|string|max:3000000',
+            'screenshotTransfer' => 'nullable|string|max:3000000',
+            'screenshot_transfer' => 'nullable|string|max:3000000',
         ]);
 
         $id = 'lead-' . Str::uuid();
@@ -47,18 +47,24 @@ class LeadController extends Controller
 
         $lead = Lead::create([
             'id' => $id,
-            'name' => $validated['name'],
+            'name' => strip_tags(trim($validated['name'])),
             'contact_type' => $contactType,
-            'contact' => $validated['contact'],
-            'level' => $request->input('level', 'Pemula'),
-            'source' => $request->input('source', 'Website'),
+            'contact' => strip_tags(trim($validated['contact'])),
+            'level' => strip_tags($request->input('level', 'Pemula')),
+            'source' => strip_tags($request->input('source', 'Website')),
             'submitted_at' => now(),
-            'notes' => $request->input('notes'),
+            'notes' => $request->filled('notes') ? strip_tags(trim($request->input('notes'))) : null,
             'event_id' => $request->input('eventId') ?? $request->input('event_id'),
-            'event_title' => $request->input('eventTitle') ?? $request->input('event_title'),
+            'event_title' => $request->filled('eventTitle') || $request->filled('event_title') 
+                ? strip_tags($request->input('eventTitle') ?? $request->input('event_title')) 
+                : null,
             'has_account' => $request->input('hasAccount') ?? $request->input('has_account'),
-            'demo_account_number' => $request->input('demoAccountNumber') ?? $request->input('demo_account_number'),
-            'demo_investor_password' => $request->input('demoInvestorPassword') ?? $request->input('demo_investor_password'),
+            'demo_account_number' => $request->filled('demoAccountNumber') || $request->filled('demo_account_number')
+                ? strip_tags($request->input('demoAccountNumber') ?? $request->input('demo_account_number'))
+                : null,
+            'demo_investor_password' => $request->filled('demoInvestorPassword') || $request->filled('demo_investor_password')
+                ? strip_tags($request->input('demoInvestorPassword') ?? $request->input('demo_investor_password'))
+                : null,
             'screenshot_real_account' => $request->input('screenshotRealAccount') ?? $request->input('screenshot_real_account'),
             'screenshot_transfer' => $request->input('screenshotTransfer') ?? $request->input('screenshot_transfer'),
         ]);

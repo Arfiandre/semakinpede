@@ -78,24 +78,32 @@ export default function SecuritySettingsModal({
     setIsLoading(true);
 
     try {
-      const res = await changeSuperadminPassword(
+      if (typeof window !== "undefined" && (window as any).axios) {
+        await (window as any).axios.post("/api/admin/security/password", {
+          current_password: currentPassword,
+          new_password: newPassword,
+          new_username: newUsername,
+        });
+      }
+
+      await changeSuperadminPassword(
         currentPassword,
         newPassword,
         newUsername
       );
 
-      if (res.success) {
-        setSuccessMsg("Kredensial superadmin berhasil diperbarui.");
-        setCurrentUsername(newUsername);
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        if (onUpdated) onUpdated();
+      setSuccessMsg("Kredensial superadmin berhasil diperbarui di database server.");
+      setCurrentUsername(newUsername);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      if (onUpdated) onUpdated();
+    } catch (err: any) {
+      if (err.response?.data?.message) {
+        setErrorMsg(err.response.data.message);
       } else {
-        setErrorMsg(res.error || "Gagal memperbarui kredensial.");
+        setErrorMsg("Gagal memperbarui kredensial di server.");
       }
-    } catch {
-      setErrorMsg("Terjadi kegagalan saat menyimpan kredensial baru.");
     } finally {
       setIsLoading(false);
     }
