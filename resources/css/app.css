@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+@source '../js/**/*.{js,jsx,ts,tsx}';
+
+@theme inline {
+  --color-navy-950: #060E1B;
+  --color-navy-900: #0A1628;
+  --color-navy-800: #0F2140;
+  --color-navy-700: #1A2D4A;
+  --color-navy-600: #243B5C;
+  --color-navy-500: #2E496E;
+  --color-navy-400: #4A6A8E;
+
+  --color-gold-600: #B89A3E;
+  --color-gold-500: #C8A84E;
+  --color-gold-400: #D4AF37;
+  --color-gold-300: #E8C547;
+  --color-gold-200: #F0D86A;
+  --color-gold-100: #FBF0C4;
+  --color-gold-50: #FFF9EB;
+
+  --color-cream: #FFFDF5;
+
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0A1628;
+}
+::-webkit-scrollbar-thumb {
+  background: #C8A84E;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+
+/* Smooth section transitions */
+section {
+  scroll-margin-top: 80px;
+}
+
+/* Accessible keyboard focus indicators */
+:focus-visible {
+  outline: 2px solid #C8A84E !important;
+  outline-offset: 2px !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #C8A84E;
+}
+
+/* Animated gradient for hero */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.gold-shimmer {
+  background: linear-gradient(90deg, #C8A84E, #E8C547, #F0D86A, #E8C547, #C8A84E);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Pulse animation for CTA */
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
+}
+
+.pulse-cta {
+  animation: pulse-gold 2s ease-in-out infinite;
+}
