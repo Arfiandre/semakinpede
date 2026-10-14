@@ -537,6 +537,7 @@ php artisan optimize</code></pre>
         <div><strong class="text-yellow-400">Website tidak bisa dibuka di port 8080:</strong> Pastikan port 8080 sudah dibuka di firewall: <code>sudo ufw allow 8080/tcp</code> dan security group cloud (jika pakai AWS/DigitalOcean/GCP).</div>
         <div><strong class="text-blue-400">502 Bad Gateway:</strong> Socket PHP-FPM tidak cocok atau belum aktif. Cek status: <code>sudo systemctl status php8.3-fpm</code>.</div>
         <div><strong class="text-rose-400">socket() [::]:XXXX failed (97: Unknown error):</strong> VPS Anda tidak mengaktifkan modul IPv6 di kernel Linux. <strong>Solusi:</strong> Hapus atau beri tanda komentar (<code>#</code>) pada baris <code>listen [::]:...;</code> di konfigurasi Nginx.</div>
+        <div><strong class="text-amber-400">tempnam(): file created in the system's temporary directory:</strong> Laravel gagal menulis cache ke <code>bootstrap/cache</code> atau <code>storage/</code> karena masalah hak akses (permission). <strong>Solusi:</strong> Jalankan <code>sudo chmod -R 775 storage bootstrap/cache && sudo chown -R $USER:www-data storage bootstrap/cache</code>.</div>
         <div><strong class="text-purple-400">Cek Log Error Realtime:</strong><br>
           <code class="text-gray-300">sudo tail -f /var/log/nginx/error.log</code>
         </div>
