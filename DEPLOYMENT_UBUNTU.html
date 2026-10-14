@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panduan Visual Deploy Laravel di Ubuntu</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --border-color: #1f2937;
+      --accent-blue: #3b82f6;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-purple: #8b5cf6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .code-block {
+      background: #030712;
+      border: 1px solid #1f2937;
+      border-radius: 0.5rem;
+      position: relative;
+    }
+    .badge-step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 9999px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
+
+  <!-- Header Section -->
+  <header class="bg-gradient-to-r from-blue-950/60 via-indigo-950/40 to-slate-900 border border-blue-900/40 rounded-2xl p-6 md:p-8 shadow-xl">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-3">
+          <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+          Production Deployment Manual
+        </div>
+        <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
+          Deployment Guide: <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400">Semakin Pede</span>
+        </h1>
+        <p class="text-gray-400 text-sm md:text-base mt-2">
+          Panduan langkah demi langkah implementasi stack <span class="text-white font-medium">Laravel + Inertia (React)</span> pada <span class="text-white font-medium">Ubuntu VPS</span> dengan Nginx, MySQL, dan PHP 8.3-FPM.
+        </p>
+      </div>
+      <div class="flex flex-col gap-2 text-xs text-gray-300 bg-gray-900/80 p-4 rounded-xl border border-gray-800">
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> <strong>OS:</strong> Ubuntu 22.04 / 24.04 LTS</div>
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> <strong>Runtime:</strong> PHP 8.3 FPM + Composer</div>
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> <strong>Web Server:</strong> Nginx</div>
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> <strong>Database:</strong> MySQL / MariaDB</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Architecture Flowchart -->
+  <section class="bg-gray-900/70 border border-gray-800 rounded-2xl p-6 shadow-md">
+    <h2 class="text-lg font-bold text-gray-200 mb-4 flex items-center gap-2">
+      <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      Arsitektur Server & Alur Request
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-3 text-center text-xs">
+      <div class="bg-gray-800/80 border border-gray-700/60 p-4 rounded-xl flex flex-col justify-center items-center">
+        <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg mb-2">🌐 Klien / Browser</div>
+        <div class="font-semibold text-white">Pengunjung Web</div>
+        <div class="text-gray-400 mt-1">HTTPS (Port 443)</div>
+      </div>
+      <div class="flex items-center justify-center text-gray-500 font-bold text-lg hidden md:flex">➔</div>
+      <div class="bg-gray-800/80 border border-indigo-900/50 p-4 rounded-xl flex flex-col justify-center items-center">
+        <div class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg mb-2">🛡️ Nginx Web Server</div>
+        <div class="font-semibold text-white">Reverse Proxy & SSL</div>
+        <div class="text-gray-400 mt-1">Let's Encrypt Certbot</div>
+      </div>
+      <div class="flex items-center justify-center text-gray-500 font-bold text-lg hidden md:flex">➔</div>
+      <div class="bg-gray-800/80 border border-emerald-900/50 p-4 rounded-xl flex flex-col justify-center items-center">
+        <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg mb-2">⚡ PHP 8.3 FPM</div>
+        <div class="font-semibold text-white">Unix Socket</div>
+        <div class="text-gray-400 mt-1 text-[11px]">/run/php/php8.3-fpm.sock</div>
+      </div>
+      <div class="col-span-full md:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+        <div class="bg-gray-950/60 border border-gray-800 p-3 rounded-lg text-left">
+          <span class="text-blue-400 font-semibold">📁 Root Folder:</span>
+          <code class="text-gray-300 ml-1">/var/www/semakinpede/public</code> (User: <span class="text-amber-400">$USER:www-data</span>)
+        </div>
+        <div class="bg-gray-950/60 border border-gray-800 p-3 rounded-lg text-left">
+          <span class="text-amber-400 font-semibold">🗄️ Database:</span>
+          <code class="text-gray-300 ml-1">semakinpede</code> via MySQL Socket / TCP 127.0.0.1:3306
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step-by-Step Deployment Stages -->
+  <main class="space-y-6">
+
+    <!-- Step 1 -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
+      <div class="flex items-start gap-4">
+        <span class="badge-step bg-blue-500/20 text-blue-400 border border-blue-500/40">1</span>
+        <div class="flex-1">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-lg font-bold text-white">Upgrade PHP ke Versi 8.3 di Ubuntu</h3>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/15 text-red-300 border border-red-500/30">Wajib (Mengatasi Isu PHP 8.2)</span>
+          </div>
+          <p class="text-gray-400 text-sm mt-1">
+            Laravel membutuhkan PHP 8.3. Tambahkan PPA resmi Ondřej Surý dan pasang ekstensi yang dibutuhkan.
+          </p>
+
+          <div class="code-block p-4 mt-3">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># 1. Update paket dan tambahkan repository PHP
+sudo apt update
+sudo apt install -y software-properties-common ca-certificates apt-transport-https
+sudo add-apt-repository ppa:ondrej/php -y
+sudo apt update
+
+# 2. Pasang PHP 8.3 & Ekstensi Laravel
+sudo apt install -y php8.3 php8.3-cli php8.3-fpm php8.3-mysql php8.3-mbstring \
+php8.3-xml php8.3-bcmath php8.3-curl php8.3-zip php8.3-intl php8.3-gd php8.3-sqlite3
+
+# 3. Jadikan PHP 8.3 sebagai default CLI & verifikasi
+sudo update-alternatives --set php /usr/bin/php8.3
+php -v</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
+      <div class="flex items-start gap-4">
+        <span class="badge-step bg-amber-500/20 text-amber-400 border border-amber-500/40">2</span>
+        <div class="flex-1">
+          <h3 class="text-lg font-bold text-white">Setup Database MySQL / MariaDB</h3>
+          <p class="text-gray-400 text-sm mt-1">
+            Buat database baru beserta pengguna khusus dengan hak akses terbatas untuk aplikasi ini.
+          </p>
+
+          <div class="code-block p-4 mt-3">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Masuk ke MySQL prompt
+sudo mysql -u root -p
+
+# Jalankan query berikut (ganti GANTI_PASSWORD_KUAT):
+CREATE DATABASE semakinpede CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'semakinpede_user'@'127.0.0.1' IDENTIFIED BY 'GANTI_PASSWORD_KUAT';
+GRANT ALL PRIVILEGES ON semakinpede.* TO 'semakinpede_user'@'127.0.0.1';
+FLUSH PRIVILEGES;
+EXIT;</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
+      <div class="flex items-start gap-4">
+        <span class="badge-step bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">3</span>
+        <div class="flex-1">
+          <h3 class="text-lg font-bold text-white">Ambil Source Code & Konfigurasi .env</h3>
+          <p class="text-gray-400 text-sm mt-1">
+            Clone repository dari GitHub, pasang paket PHP via Composer, dan atur kredensial production.
+          </p>
+
+          <div class="code-block p-4 mt-3">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Buat folder dan beri hak milik ke user Anda
+sudo mkdir -p /var/www/semakinpede
+sudo chown -R "$USER":"$USER" /var/www/semakinpede
+
+# Clone repository
+git clone https://github.com/Arfiandre/semakinpede.git /var/www/semakinpede
+cd /var/www/semakinpede
+
+# Install vendor Composer untuk production
+composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+
+# Konfigurasi file environment
+cp .env.example .env
+nano .env</code></pre>
+          </div>
+
+          <div class="mt-3 bg-gray-950 p-3 rounded-lg border border-gray-800 text-xs">
+            <span class="text-emerald-400 font-semibold">Pastikan variabel kunci pada .env sudah disetel:</span>
+            <div class="mt-1 font-mono text-gray-300">
+              APP_ENV=production<br>
+              APP_DEBUG=false<br>
+              APP_URL=https://domainanda.com<br>
+              DB_CONNECTION=mysql<br>
+              DB_DATABASE=semakinpede<br>
+              DB_USERNAME=semakinpede_user<br>
+              DB_PASSWORD=GANTI_PASSWORD_KUAT
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
+      <div class="flex items-start gap-4">
+        <span class="badge-step bg-purple-500/20 text-purple-400 border border-purple-500/40">4</span>
+        <div class="flex-1">
+          <h3 class="text-lg font-bold text-white">Build Frontend (Vite) & Database Migration</h3>
+          <p class="text-gray-400 text-sm mt-1">
+            Generate enkripsi APP_KEY, compile aset Inertia/React, dan eksekusi struktur tabel database.
+          </p>
+
+          <div class="code-block p-4 mt-3">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code>cd /var/www/semakinpede
+
+# 1. Generate App Key
+php artisan key:generate
+
+# 2. Build Aset Frontend React + Vite
+npm ci
+npm run build
+
+# 3. Jalankan Database Migration & Seeder Data Awal
+php artisan migrate --force --seed
+
+# 4. Tautkan Storage Public
+php artisan storage:link</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
+      <div class="flex items-start gap-4">
+        <span class="badge-step bg-indigo-500/20 text-indigo-400 border border-indigo-500/40">5</span>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <h3 class="text-lg font-bold text-white">Atur Hak Akses / Permission Folder (Khusus Ubuntu)</h3>
+            <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Crucial for Ubuntu</span>
+          </div>
+          <p class="text-gray-400 text-sm mt-1">
+            Di Ubuntu, web server berjalan dengan user group <code class="text-amber-400">www-data</code>. Beri hak tulis pada folder storage dan bootstrap cache.
+          </p>
+
+          <div class="code-block p-4 mt-3">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Set kepemilikan file ke user Anda dan group www-data
+sudo chown -R $USER:www-data /var/www/semakinpede
+
+# Beri hak baca dan tulis pada storage dan cache
+sudo chmod -R 775 /var/www/semakinpede/storage /var/www/semakinpede/bootstrap/cache</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
+      <div class="flex items-start gap-4">
+        <span class="badge-step bg-blue-500/20 text-blue-400 border border-blue-500/40">6</span>
+        <div class="flex-1">
+          <h3 class="text-lg font-bold text-white">Konfigurasi Virtual Host Nginx</h3>
+          <p class="text-gray-400 text-sm mt-1">
+            Buat file vhost Nginx baru di <code class="text-blue-300">/etc/nginx/sites-available/semakinpede</code>.
+          </p>
+
+          <div class="code-block p-4 mt-3">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code>server {
+    listen 80;
+    listen [::]:80;
+    server_name domainanda.com www.domainanda.com;
+
+    root /var/www/semakinpede/public;
+    index index.php index.html;
+    charset utf-8;
+
+    client_max_body_size 64M;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}</code></pre>
+          </div>
+
+          <p class="text-xs text-gray-400 mt-3">Aktifkan konfigurasi dan reload Nginx:</p>
+          <div class="code-block p-4 mt-2">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Aktifkan site & matikan default
+sudo ln -s /etc/nginx/sites-available/semakinpede /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# Validasi & reload
+sudo nginx -t && sudo systemctl reload nginx</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
+      <div class="flex items-start gap-4">
+        <span class="badge-step bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">7</span>
+        <div class="flex-1">
+          <h3 class="text-lg font-bold text-white">Pasang SSL / HTTPS Gratis (Let's Encrypt Certbot)</h3>
+          <p class="text-gray-400 text-sm mt-1">
+            Amankan domain Anda dengan sertifikat SSL gratis dan perpanjangan otomatis.
+          </p>
+
+          <div class="code-block p-4 mt-3">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code># Pasang Certbot plugin Nginx
+sudo apt install -y certbot python3-certbot-nginx
+
+# Jalankan installer sertifikat otomatis (sesuaikan nama domain)
+sudo certbot --nginx -d domainanda.com -d www.domainanda.com</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md transition hover:border-gray-700">
+      <div class="flex items-start gap-4">
+        <span class="badge-step bg-rose-500/20 text-rose-400 border border-rose-500/40">8</span>
+        <div class="flex-1">
+          <h3 class="text-lg font-bold text-white">Optimalisasi Akhir (Production Caching)</h3>
+          <p class="text-gray-400 text-sm mt-1">
+            Percepat waktu respon aplikasi dengan meng-cache file config, route, dan view Laravel.
+          </p>
+
+          <div class="code-block p-4 mt-3">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Copy</button>
+            <pre class="text-xs md:text-sm text-gray-200 overflow-x-auto leading-relaxed"><code>cd /var/www/semakinpede
+php artisan optimize</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Troubleshooting & Checklist Section -->
+  <footer class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+    <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl">
+      <h4 class="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
+        <span class="text-emerald-400">✓</span> Checklist Verifikasi Selesai
+      </h4>
+      <ul class="space-y-2 text-xs text-gray-300">
+        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> PHP 8.3 CLI & FPM aktif</li>
+        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> Root Nginx diarahkan ke <code class="text-gray-400">/public</code></li>
+        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> Izin folder <code class="text-gray-400">storage</code> berstatus 775 untuk <code class="text-gray-400">www-data</code></li>
+        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> <code class="text-gray-400">.env</code> mode <code class="text-emerald-400">APP_DEBUG=false</code></li>
+        <li class="flex items-center gap-2"><input type="checkbox" checked disabled class="accent-emerald-500"> Aset Frontend selesai dibuild via <code class="text-gray-400">npm run build</code></li>
+      </ul>
+    </div>
+
+    <div class="bg-gray-900/60 border border-gray-800 p-5 rounded-xl">
+      <h4 class="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
+        <span class="text-amber-400">⚠️</span> Quick Troubleshooting Tips
+      </h4>
+      <div class="space-y-2 text-xs text-gray-400">
+        <div><strong class="text-red-400">502 Bad Gateway:</strong> Socket PHP-FPM tidak cocok atau mati. Jalankan <code class="text-gray-300">sudo systemctl status php8.3-fpm</code>.</div>
+        <div><strong class="text-amber-400">403 Forbidden:</strong> Hak akses folder atau direktori root salah. Pastikan mengarah ke <code class="text-gray-300">/public</code>.</div>
+        <div><strong class="text-purple-400">Cek Log Error Realtime:</strong><br>
+          <code class="text-gray-300">sudo tail -f /var/log/nginx/semakinpede_error.log</code><br>
+          <code class="text-gray-300">tail -f /var/www/semakinpede/storage/logs/laravel.log</code>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function copyCode(btn) {
+      const codeElement = btn.parentElement.querySelector('code');
+      const text = codeElement.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Tersalin! ✓';
+        btn.classList.add('bg-emerald-700', 'text-white');
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.classList.remove('bg-emerald-700', 'text-white');
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
