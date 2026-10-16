@@ -10,17 +10,12 @@ import {
   ArrowLeft,
   AlertCircle,
   Clock,
-  KeyRound,
-  CheckCircle2,
-  Info,
 } from "lucide-react";
 import { Link } from "@inertiajs/react";
 import {
   authenticateSuperadmin,
   getSecuritySettings,
   resetSuperadminSecurityToDefault,
-  DEFAULT_USERNAME,
-  DEFAULT_PASSWORD_PLAIN,
 } from "@/lib/authStorage";
 
 interface AdminLoginFormProps {
@@ -35,8 +30,6 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lockRemainingSeconds, setLockRemainingSeconds] = useState<number>(0);
-  const [showDefaultHint, setShowDefaultHint] = useState(false);
-  const [copiedHint, setCopiedHint] = useState<string | null>(null);
 
   // Periksa apakah sedang dalam status lockout
   useEffect(() => {
@@ -118,16 +111,6 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillDefaultCredentials = () => {
-    resetSuperadminSecurityToDefault();
-    setLockRemainingSeconds(0);
-    setErrorMessage(null);
-    setUsername(DEFAULT_USERNAME);
-    setPassword(DEFAULT_PASSWORD_PLAIN);
-    setCopiedHint("Kredensial bawaan berhasil diisikan ke form.");
-    setTimeout(() => setCopiedHint(null), 3000);
   };
 
   const isLocked = lockRemainingSeconds > 0;
@@ -237,22 +220,12 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
 
             {/* Field Password */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label
-                  htmlFor="admin-password"
-                  className="block text-xs font-semibold text-slate-300 uppercase tracking-wider"
-                >
-                  Kata Sandi
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowDefaultHint(!showDefaultHint)}
-                  className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 font-medium"
-                >
-                  <KeyRound className="w-3 h-3" />
-                  <span>Kredensial Awal?</span>
-                </button>
-              </div>
+              <label
+                htmlFor="admin-password"
+                className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+              >
+                Kata Sandi
+              </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
@@ -319,51 +292,6 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
               )}
             </button>
           </form>
-
-          {/* Drawer Kredensial Awal Bawaan */}
-          {showDefaultHint && (
-            <div className="mt-6 pt-5 border-t border-slate-800 text-xs">
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 space-y-2">
-                <div className="flex items-center justify-between text-amber-400 font-semibold text-[11px] uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5" />
-                    Kredensial Default Sistem
-                  </span>
-                  <button
-                    type="button"
-                    onClick={fillDefaultCredentials}
-                    className="text-amber-400 hover:text-amber-300 underline text-[11px] font-bold"
-                  >
-                    Gunakan Otomatis
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-2 font-mono text-[11px] pt-1">
-                  <div className="bg-slate-900 p-2 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block text-[10px] font-sans">
-                      Username:
-                    </span>
-                    <span className="text-white font-bold">{DEFAULT_USERNAME}</span>
-                  </div>
-                  <div className="bg-slate-900 p-2 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block text-[10px] font-sans">
-                      Password:
-                    </span>
-                    <span className="text-white font-bold">{DEFAULT_PASSWORD_PLAIN}</span>
-                  </div>
-                </div>
-                {copiedHint && (
-                  <p className="text-emerald-400 text-[11px] flex items-center gap-1 mt-1 font-medium">
-                    <CheckCircle2 className="w-3 h-3" />
-                    {copiedHint}
-                  </p>
-                )}
-                <p className="text-slate-400 text-[10px] leading-relaxed pt-1">
-                  Catatan: Setelah berhasil masuk, Anda dapat memperbarui kata
-                  sandi melalui menu pengaturan keamanan di header dashboard.
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer Security Badges */}
