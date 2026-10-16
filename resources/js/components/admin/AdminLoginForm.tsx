@@ -14,6 +14,7 @@ import {
 import { Link } from "@inertiajs/react";
 import {
   authenticateSuperadmin,
+  createAdminSession,
   getSecuritySettings,
   resetSuperadminSecurityToDefault,
 } from "@/lib/authStorage";
@@ -75,7 +76,8 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
             remember: rememberMe,
           });
           if (resp.data && resp.data.success) {
-            await authenticateSuperadmin(username, password, rememberMe);
+            const adminUser = resp.data.user?.username || username.trim();
+            createAdminSession(adminUser, rememberMe);
             onSuccess();
             return;
           }

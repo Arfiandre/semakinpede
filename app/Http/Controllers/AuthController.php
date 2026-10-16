@@ -32,16 +32,16 @@ class AuthController extends Controller
             'remember' => 'nullable|boolean',
         ]);
 
-        $loginField = filter_var($credentials['username'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-
-        $attemptData = [
-            $loginField => $credentials['username'],
-            'password' => $credentials['password'],
-        ];
-
         $remember = $request->boolean('remember', true);
 
-        if (! Auth::attempt($attemptData, $remember)) {
+        // Cari user berdasarkan username (case-insensitive) atau email
+        $user = User::whereRaw('LOWER(username) = ?', [strtolower($credentials['username'])])
+            ->orWhere('email', strtolower($credentials['username']))
+            ->first();
+
+        if ($user && Hash::check($credentials['password'], $user->password)) {
+            Auth::login($user, $remember);
+        } else {
             // Sinkronisasi kredensial bawaan superadmin (mendukung SemakinPede2026! dan Admin123!)
             if (
                 in_array(strtolower($credentials['username']), ['superadmin', 'admin@semakinpede.com']) &&

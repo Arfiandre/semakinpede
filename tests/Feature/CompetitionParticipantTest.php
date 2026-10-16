@@ -97,4 +97,21 @@ class CompetitionParticipantTest extends TestCase
             'demo_investor_password' => 'Investor99',
         ]);
     }
+
+    public function test_arfiandre_can_login_with_matematika_password(): void
+    {
+        $this->seed();
+
+        $response = $this->postJson('/admin/login', [
+            'username' => 'Arfiandre',
+            'password' => 'matematika',
+            'remember' => true,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+        ]);
+        $this->assertAuthenticated();
+    }
 }
