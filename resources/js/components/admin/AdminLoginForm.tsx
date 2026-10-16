@@ -143,10 +143,6 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-[var(--font-heading)]">
             Akses Portal Superadmin
           </h1>
-          <p className="mt-2 text-xs sm:text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
-            Halaman ini dilindungi secara khusus untuk mengelola event,
-            kemitraan pialang, dan konfigurasi landing page Semakin Pede.
-          </p>
         </div>
 
         {/* Login Box */}
