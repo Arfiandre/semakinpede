@@ -18,6 +18,7 @@ import { Link } from "@inertiajs/react";
 import {
   authenticateSuperadmin,
   getSecuritySettings,
+  resetSuperadminSecurityToDefault,
   DEFAULT_USERNAME,
   DEFAULT_PASSWORD_PLAIN,
 } from "@/lib/authStorage";
@@ -120,6 +121,9 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
   };
 
   const fillDefaultCredentials = () => {
+    resetSuperadminSecurityToDefault();
+    setLockRemainingSeconds(0);
+    setErrorMessage(null);
     setUsername(DEFAULT_USERNAME);
     setPassword(DEFAULT_PASSWORD_PLAIN);
     setCopiedHint("Kredensial bawaan berhasil diisikan ke form.");
@@ -168,7 +172,7 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
           {isLocked && (
             <div className="mb-6 p-4 rounded-xl bg-rose-950/60 border border-rose-800/80 text-rose-200 text-xs flex items-start gap-3">
               <Clock className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5 animate-pulse" />
-              <div>
+              <div className="flex-1">
                 <p className="font-semibold text-rose-100 mb-0.5">
                   Akses Terkunci Sementara
                 </p>
@@ -180,6 +184,17 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
                   </span>{" "}
                   sebelum mencoba kembali.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetSuperadminSecurityToDefault();
+                    setLockRemainingSeconds(0);
+                    setErrorMessage(null);
+                  }}
+                  className="mt-2 text-xs text-amber-400 hover:text-amber-300 underline font-semibold block"
+                >
+                  Buka Kunci Akses Sekarang
+                </button>
               </div>
             </div>
           )}
