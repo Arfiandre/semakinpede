@@ -24,7 +24,7 @@ export const DEFAULT_BROKERS: BrokerItem[] = [
     ],
     actionText: "Konsultasi Pendaftaran TPFX",
     actionUrl:
-      "https://wa.me/6281211119999?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20konsultasi%20pembukaan%20akun%20demo%20atau%20riil%20TPFX",
+      "https://wa.me/628176792110?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20konsultasi%20pembukaan%20akun%20demo%20atau%20riil%20TPFX",
     officialSiteUrl: "https://bappebti.go.id",
     isFeatured: true,
     order: 1,
@@ -48,7 +48,18 @@ export function getStoredBrokers(): BrokerItem[] {
       localStorage.setItem(BROKER_STORAGE_KEY, JSON.stringify(DEFAULT_BROKERS));
       return DEFAULT_BROKERS;
     }
-    return parsed;
+    let needsUpdate = false;
+    const result = parsed.map((b) => {
+      if (b.actionUrl && b.actionUrl.includes("6281211119999")) {
+        needsUpdate = true;
+        return { ...b, actionUrl: b.actionUrl.replace("6281211119999", "628176792110") };
+      }
+      return b;
+    });
+    if (needsUpdate) {
+      localStorage.setItem(BROKER_STORAGE_KEY, JSON.stringify(result));
+    }
+    return result;
   } catch (err) {
     console.error("Gagal membaca daftar broker dari localStorage:", err);
     return DEFAULT_BROKERS;

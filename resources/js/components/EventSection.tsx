@@ -339,19 +339,10 @@ export default function EventSection() {
                 {/* Footer Action */}
                 <div className="p-6 pt-0">
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
-                    {event.attendeesCount && (
-                      <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5 text-slate-400" />
-                        {event.attendeesCount}
-                      </span>
-                    )}
-
                     <button
                       type="button"
                       onClick={() => handleAction(event)}
-                      className={`inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-xs ${
-                        !event.attendeesCount ? "w-full" : ""
-                      } ${
+                      className={`w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-xs ${
                         isOngoing
                           ? "bg-emerald-600 hover:bg-emerald-500 text-white"
                           : isUpcoming
@@ -387,7 +378,7 @@ export default function EventSection() {
           </div>
 
           <a
-            href="https://wa.me/6281211119999?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20mengusulkan%20topik%20webinar%20atau%20tanya%20jadwal%20event"
+            href="https://wa.me/628176792110?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20mengusulkan%20topik%20webinar%20atau%20tanya%20jadwal%20event"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 py-2 px-3.5 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl font-semibold whitespace-nowrap transition-colors"

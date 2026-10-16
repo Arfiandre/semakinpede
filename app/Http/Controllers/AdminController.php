@@ -43,4 +43,19 @@ class AdminController extends Controller
             'auditLogs' => $auditLogs,
         ]);
     }
+
+    public function participants(): Response
+    {
+        $participants = Lead::whereNotNull('event_id')
+            ->orWhereNotNull('event_title')
+            ->orWhereNotNull('demo_account_number')
+            ->orWhereNotNull('has_account')
+            ->orWhere('source', 'like', '%event%')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return Inertia::render('Admin/Participants', [
+            'initialParticipants' => $participants,
+        ]);
+    }
 }

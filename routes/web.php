@@ -40,6 +40,9 @@ Route::middleware(['auth'])->group(function () {
     // Superadmin Dashboard
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.dashboard');
 
+    // Superadmin Competition Participants View Page
+    Route::get('/admin/participants', [AdminController::class, 'participants'])->name('admin.participants');
+
     // Protected API Endpoints for Admin Management
     Route::prefix('api')->group(function () {
         // Superadmin Security & Credential Management
@@ -59,6 +62,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Leads Management
         Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
+        Route::get('/participants', [LeadController::class, 'participants'])->name('participants.index');
         Route::delete('/leads/{id}', [LeadController::class, 'destroy'])->name('leads.destroy');
         Route::delete('/leads', [LeadController::class, 'clearAll'])->name('leads.clearAll');
 

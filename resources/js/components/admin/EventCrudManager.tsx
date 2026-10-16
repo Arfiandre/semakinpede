@@ -124,7 +124,8 @@ const emptyForm: FormState = {
   actionText: "Daftar Sekarang",
   actionType: "rsvp",
   telegramGroupUrl: "https://t.me/semakinpede_official",
-  tutorialAccountUrl: "https://tpfx.co.id/tutorial-buka-akun",
+  tutorialAccountUrl:
+    "https://drive.google.com/file/d/1kBVRqc8q6XcvHSdqVweg_Fc64Z_u79FV/view?usp=sharing",
 };
 
 export default function EventCrudManager() {
@@ -552,6 +553,7 @@ export default function EventCrudManager() {
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="all">Semua Jenis Kegiatan</option>
+            <option value="Trading Competition">Trading Competition</option>
             <option value="Webinar Online">Webinar Online</option>
             <option value="Live Trading Bareng">Live Trading Bareng</option>
             <option value="Workshop Khusus">Workshop Khusus</option>
@@ -824,12 +826,13 @@ export default function EventCrudManager() {
                 <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
                   Pilih Jenis Kegiatan <span className="text-rose-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                   {(
                     [
+                      { key: "Trading Competition", icon: Trophy, desc: "Kejuaraan Berhadiah" },
                       { key: "Webinar Online", icon: Video, desc: "Sesi Virtual Meeting" },
                       { key: "Live Trading Bareng", icon: TrendingUp, desc: "Sesi Eksekusi Pasar" },
-                      { key: "Workshop Khusus", icon: Trophy, desc: "Kompetisi / Bootcamp" },
+                      { key: "Workshop Khusus", icon: Sparkles, desc: "Bootcamp / Khusus" },
                       { key: "Seminar Edukasi", icon: Landmark, desc: "Tatap Muka / On-site" },
                     ] as const
                   ).map((cat) => {
@@ -1174,7 +1177,53 @@ export default function EventCrudManager() {
                   </div>
                 )}
 
-                {/* KONDISI 3: WORKSHOP KHUSUS / TRADING COMPETITION */}
+                {/* KONDISI KHUSUS: TRADING COMPETITION */}
+                {form.category === "Trading Competition" && (
+                  <div className="space-y-4 animate-in fade-in">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 mb-1">
+                          Total Hadiah Kompetisi
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Contoh: Rp 5.700.000 (Best Performance & Best Volume)"
+                          value={form.prizePool}
+                          onChange={(e) => setForm((p) => ({ ...p, prizePool: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm text-slate-900 font-bold text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-800 mb-1">
+                          Batas Akhir Pendaftaran (Date)
+                        </label>
+                        <input
+                          type="date"
+                          max={form.startDate}
+                          value={form.registrationDeadline}
+                          onChange={(e) => setForm((p) => ({ ...p, registrationDeadline: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-800 mb-1">
+                        Platform Akun Kompetisi
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Platform MetaTrader 5 (Didukung Pialang Resmi TPFX - BAPPEBTI)"
+                        value={form.competitionAccountPlatform}
+                        onChange={(e) => setForm((p) => ({ ...p, competitionAccountPlatform: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* KONDISI 3: WORKSHOP KHUSUS */}
                 {form.category === "Workshop Khusus" && (
                   <div className="space-y-4 animate-in fade-in">
                     <div>
@@ -1542,7 +1591,7 @@ export default function EventCrudManager() {
                     </label>
                     <input
                       type="url"
-                      placeholder="Contoh: https://tpfx.co.id/tutorial-buka-akun"
+                      placeholder="Contoh: https://drive.google.com/file/d/1kBVRqc8q6XcvHSdqVweg_Fc64Z_u79FV/view?usp=sharing"
                       value={form.tutorialAccountUrl}
                       onChange={(e) => setForm((p) => ({ ...p, tutorialAccountUrl: e.target.value }))}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"

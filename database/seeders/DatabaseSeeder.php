@@ -2,14 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Event;
 use App\Models\Broker;
-use App\Models\SiteSetting;
 use App\Models\EconomicNews;
+use App\Models\Event;
+use App\Models\SiteSetting;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
             [
                 'poster_image' => $competitionPoster,
                 'title' => 'Trading Semakin Pede Competition',
-                'category' => 'Workshop Khusus',
+                'category' => 'Trading Competition',
                 'status' => 'upcoming',
                 'date' => 'Kamis, 29 Oktober 2026 (Pendaftaran s.d. 26 Oktober 2026)',
                 'time' => 'Sesi London & New York (14.00 - 04.00 WIB)',
@@ -54,11 +54,11 @@ class DatabaseSeeder extends Seeder
                     'Batas Akhir Pendaftaran: 26 Oktober 2026',
                     'Akun Kompetisi Resmi Didukung Pialang Legal BAPPEBTI: TPFX',
                 ],
-                'attendees_count' => '64 Trader Terdaftar (Slot Terbatas)',
+                'attendees_count' => null,
                 'action_text' => 'Daftar Sekarang',
                 'action_type' => 'rsvp',
                 'telegram_group_url' => 'https://t.me/semakinpede_official',
-                'tutorial_account_url' => 'https://tpfx.co.id/tutorial-buka-akun',
+                'tutorial_account_url' => 'https://drive.google.com/file/d/1kBVRqc8q6XcvHSdqVweg_Fc64Z_u79FV/view?usp=sharing',
             ]
         );
 
@@ -81,7 +81,7 @@ class DatabaseSeeder extends Seeder
                     'Eksekusi Cepat dengan Dukungan Customer Support 24/5 Berbahasa Indonesia',
                 ],
                 'action_text' => 'Konsultasi Pendaftaran TPFX',
-                'action_url' => 'https://wa.me/6281211119999?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20konsultasi%20pembukaan%20akun%20demo%20atau%20riil%20TPFX',
+                'action_url' => 'https://wa.me/628176792110?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20konsultasi%20pembukaan%20akun%20demo%20atau%20riil%20TPFX',
                 'official_site_url' => 'https://bappebti.go.id',
                 'is_featured' => true,
                 'order' => 1,
@@ -97,7 +97,7 @@ class DatabaseSeeder extends Seeder
                 'project_description' => 'Komunitas edukasi trading kontrak berjangka komoditi (Gold, Oil, CPO) Indonesia. Berfokus pada manajemen risiko, kepatuhan regulasi BAPPEBTI, dan analisis data pasar secara rasional.',
                 'logo_url' => '',
                 'social_media' => [
-                    'whatsapp' => 'https://wa.me/6281211119999?text=Halo%20Admin%20Semakin%20Pede',
+                    'whatsapp' => 'https://wa.me/628176792110?text=Halo%20Admin%20Semakin%20Pede',
                     'telegram' => 'https://t.me/semakinpede',
                     'instagram' => 'https://instagram.com/semakinpede',
                     'youtube' => 'https://youtube.com/@semakinpede',
@@ -114,21 +114,21 @@ class DatabaseSeeder extends Seeder
                 $months = ['Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr', 'May' => 'Mei', 'Jun' => 'Jun', 'Jul' => 'Jul', 'Aug' => 'Agt', 'Sep' => 'Sep', 'Oct' => 'Okt', 'Nov' => 'Nov', 'Dec' => 'Des'];
 
                 foreach (array_slice($rawNews, 0, 30) as $index => $item) {
-                    $id = 'ff-news-' . md5(($item['title'] ?? '') . ($item['date'] ?? '') . $index);
+                    $id = 'ff-news-'.md5(($item['title'] ?? '').($item['date'] ?? '').$index);
                     $dateObj = null;
                     $timeFormatted = 'Terkini';
                     $dateFormatted = '';
                     $dayName = 'Hari Ini';
 
                     try {
-                        if (!empty($item['date'])) {
+                        if (! empty($item['date'])) {
                             $dateObj = new \DateTime($item['date']);
-                            $timeFormatted = $dateObj->format('H:i') . ' WIB';
+                            $timeFormatted = $dateObj->format('H:i').' WIB';
                             $dayEng = $dateObj->format('l');
                             $dayName = $days[$dayEng] ?? $dayEng;
                             $mEng = $dateObj->format('M');
                             $mInd = $months[$mEng] ?? $mEng;
-                            $dateFormatted = $dateObj->format('d ') . $mInd . $dateObj->format(' Y');
+                            $dateFormatted = $dateObj->format('d ').$mInd.$dateObj->format(' Y');
                         }
                     } catch (\Exception $e) {
                         // ignore date parse error

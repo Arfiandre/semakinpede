@@ -13,6 +13,7 @@ class LeadController extends Controller
     public function index(): JsonResponse
     {
         $leads = Lead::orderBy('created_at', 'desc')->get();
+
         return response()->json($leads);
     }
 
@@ -42,7 +43,7 @@ class LeadController extends Controller
             'screenshot_transfer' => 'nullable|string|max:3000000',
         ]);
 
-        $id = 'lead-' . Str::uuid();
+        $id = 'lead-'.Str::uuid();
         $contactType = $request->input('contactType') ?? $request->input('contact_type', 'wa');
 
         $lead = Lead::create([
@@ -55,8 +56,8 @@ class LeadController extends Controller
             'submitted_at' => now(),
             'notes' => $request->filled('notes') ? strip_tags(trim($request->input('notes'))) : null,
             'event_id' => $request->input('eventId') ?? $request->input('event_id'),
-            'event_title' => $request->filled('eventTitle') || $request->filled('event_title') 
-                ? strip_tags($request->input('eventTitle') ?? $request->input('event_title')) 
+            'event_title' => $request->filled('eventTitle') || $request->filled('event_title')
+                ? strip_tags($request->input('eventTitle') ?? $request->input('event_title'))
                 : null,
             'has_account' => $request->input('hasAccount') ?? $request->input('has_account'),
             'demo_account_number' => $request->filled('demoAccountNumber') || $request->filled('demo_account_number')
@@ -70,7 +71,7 @@ class LeadController extends Controller
         ]);
 
         AuditLog::create([
-            'id' => 'audit-' . Str::uuid(),
+            'id' => 'audit-'.Str::uuid(),
             'action' => 'lead_captured',
             'details' => "Lead baru diterima: {$lead->name} ({$lead->contact}) via {$lead->source}",
             'operator' => 'system',
@@ -89,14 +90,30 @@ class LeadController extends Controller
         $lead = Lead::find($id);
         if ($lead) {
             $lead->delete();
+
             return response()->json(['success' => true]);
         }
+
         return response()->json(['success' => false, 'message' => 'Lead tidak ditemukan'], 404);
     }
 
     public function clearAll(): JsonResponse
     {
         Lead::truncate();
+
         return response()->json(['success' => true, 'message' => 'Semua lead berhasil dihapus']);
+    }
+
+    public function participants(): JsonResponse
+    {
+        $participants = Lead::whereNotNull('event_id')
+            ->orWhereNotNull('event_title')
+            ->orWhereNotNull('demo_account_number')
+            ->orWhereNotNull('has_account')
+            ->orWhere('source', 'like', '%event%')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($participants);
     }
 }

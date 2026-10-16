@@ -5,7 +5,7 @@ import { MessageCircle, X } from "lucide-react";
 import { getSiteSettings } from "@/lib/siteSettingsStorage";
 
 const DEFAULT_WA_URL =
-  "https://wa.me/6281211119999?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20tahu%20lebih%20lanjut%20tentang%20komunitas%20dan%20edukasi%20komoditas";
+  "https://wa.me/628176792110?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20tahu%20lebih%20lanjut%20tentang%20komunitas%20dan%20edukasi%20komoditas";
 
 export default function WhatsAppButton() {
   const [showTooltip, setShowTooltip] = useState(false);
