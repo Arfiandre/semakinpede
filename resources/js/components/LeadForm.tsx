@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { insertLeadDB } from "@/lib/db";
 
-const WHATSAPP_NUMBER = "6281211119999";
+const WHATSAPP_NUMBER = "628176792110";
 const TELEGRAM_USERNAME = "semakinpede";
 const EMAIL_ADDRESS = "edukasi@semakinpede.id";
 

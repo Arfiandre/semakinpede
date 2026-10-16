@@ -25,6 +25,7 @@ import {
   LogOut,
   KeyRound,
   Database,
+  Trophy,
 } from "lucide-react";
 import { Link, Head } from "@inertiajs/react";
 import EventCrudManager from "@/components/admin/EventCrudManager";
@@ -32,6 +33,7 @@ import SiteSettingsManager from "@/components/admin/SiteSettingsManager";
 import BrokerCrudManager from "@/components/admin/BrokerCrudManager";
 import ForexFactoryNewsManager from "@/components/admin/ForexFactoryNewsManager";
 import DatabaseManager from "@/components/admin/DatabaseManager";
+import CompetitionParticipantsManager from "@/components/admin/CompetitionParticipantsManager";
 import AdminLoginForm from "@/components/admin/AdminLoginForm";
 import SecuritySettingsModal from "@/components/admin/SecuritySettingsModal";
 import {
@@ -55,7 +57,7 @@ const STORAGE_KEY = "kfi_leads";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
-    "events" | "brokers" | "news" | "settings" | "leads" | "database"
+    "events" | "brokers" | "news" | "settings" | "leads" | "database" | "participants"
   >("events");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [search, setSearch] = useState("");
@@ -284,6 +286,15 @@ export default function AdminPage() {
               </button>
 
               <Link
+                href="/admin/participants"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl transition-colors shadow-xs"
+                title="Lihat Data Partisipan Lomba"
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Partisipan Lomba</span>
+              </Link>
+
+              <Link
                 href="/#event"
                 target="_blank"
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold rounded-xl transition-colors"
@@ -419,6 +430,19 @@ export default function AdminPage() {
               <Database className="w-4 h-4" />
               <span>6. Database & Cadangan</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("participants")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+                activeTab === "participants"
+                  ? "bg-gold-400 text-navy-950 shadow-sm"
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Trophy className="w-4 h-4" />
+              <span>7. Partisipan Lomba</span>
+            </button>
           </div>
         </div>
       </header>
@@ -462,77 +486,6 @@ export default function AdminPage() {
                 label="Telegram"
                 value={stats.byContact.telegram}
               />
-            </div>
-
-            {/* Breakdown Row */}
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* By Source */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-                <h3 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-amber-600" />
-                  Leads per Sumber Formulir
-                </h3>
-                {Object.keys(stats.bySource).length === 0 ? (
-                  <p className="text-slate-400 text-xs">Belum ada data lead</p>
-                ) : (
-                  <div className="space-y-2">
-                    {Object.entries(stats.bySource)
-                      .sort(([, a], [, b]) => b - a)
-                      .map(([source, count]) => (
-                        <div key={source} className="flex items-center gap-3">
-                          <span className="text-xs text-slate-600 w-28 truncate font-medium">
-                            {source}
-                          </span>
-                          <div className="flex-1 bg-slate-100 rounded-full h-3.5 overflow-hidden">
-                            <div
-                              className="bg-amber-500 h-full rounded-full transition-all"
-                              style={{
-                                width: `${(count / stats.total) * 100}%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-xs font-bold text-slate-900 w-8 text-right font-mono">
-                            {count}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-
-              {/* By Level */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-                <h3 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-amber-600" />
-                  Leads per Level Pengalaman
-                </h3>
-                {Object.keys(stats.byLevel).length === 0 ? (
-                  <p className="text-slate-400 text-xs">Belum ada data lead</p>
-                ) : (
-                  <div className="space-y-2">
-                    {Object.entries(stats.byLevel)
-                      .sort(([, a], [, b]) => b - a)
-                      .map(([level, count]) => (
-                        <div key={level} className="flex items-center gap-3">
-                          <span className="text-xs text-slate-600 w-28 truncate font-medium">
-                            {level}
-                          </span>
-                          <div className="flex-1 bg-slate-100 rounded-full h-3.5 overflow-hidden">
-                            <div
-                              className="bg-navy-950 h-full rounded-full transition-all"
-                              style={{
-                                width: `${(count / stats.total) * 100}%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-xs font-bold text-slate-900 w-8 text-right font-mono">
-                            {count}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Toolbar & Filters */}
@@ -726,6 +679,9 @@ export default function AdminPage() {
 
         {/* TAB 6: DATABASE & CADANGAN */}
         {activeTab === "database" && <DatabaseManager />}
+
+        {/* TAB 7: DATA PARTISIPAN LOMBA */}
+        {activeTab === "participants" && <CompetitionParticipantsManager />}
       </main>
 
       {/* Modal Pengaturan Keamanan Kredensial Superadmin */}

@@ -23,7 +23,7 @@ export default function MobileStickyForm() {
 
     const message = `Halo Admin Semakin Pede, saya ${name.trim()} (${contact.trim()}) ingin bergabung ke grup komunitas via mobile sticky bar.`;
     const settings = getSiteSettings();
-    const baseWa = settings.socialMedia?.whatsapp || "https://wa.me/6281211119999";
+    const baseWa = settings.socialMedia?.whatsapp || "https://wa.me/628176792110";
     const waUrl = baseWa.includes("?") 
       ? `${baseWa}&text=${encodeURIComponent(message)}`
       : `${baseWa}?text=${encodeURIComponent(message)}`;

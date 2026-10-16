@@ -11,12 +11,12 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   projectDescription:
     "Komunitas edukasi trading kontrak berjangka komoditi (Gold, Oil, CPO) Indonesia. Berfokus pada manajemen risiko, kepatuhan regulasi BAPPEBTI, dan analisis data pasar secara rasional.",
   socialMedia: {
-    whatsapp: "https://wa.me/6281211119999?text=Halo%20Admin%20Semakin%20Pede",
+    whatsapp: "https://wa.me/628176792110?text=Halo%20Admin%20Semakin%20Pede",
     telegram: "https://t.me/semakinpede",
     instagram: "https://instagram.com/semakinpede",
     youtube: "https://youtube.com/@semakinpede",
   },
-  updatedAt: "2026-10-12T12:00:00.000Z",
+  updatedAt: "2026-10-16T13:30:00.000Z",
 };
 
 export function getSiteSettings(): SiteSettings {
@@ -33,7 +33,7 @@ export function getSiteSettings(): SiteSettings {
       return DEFAULT_SITE_SETTINGS;
     }
     const parsed = JSON.parse(raw);
-    return {
+    const result: SiteSettings = {
       ...DEFAULT_SITE_SETTINGS,
       ...parsed,
       socialMedia: {
@@ -41,6 +41,11 @@ export function getSiteSettings(): SiteSettings {
         ...(parsed.socialMedia || {}),
       },
     };
+    if (result.socialMedia?.whatsapp?.includes("6281211119999")) {
+      result.socialMedia.whatsapp = result.socialMedia.whatsapp.replace("6281211119999", "628176792110");
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(result));
+    }
+    return result;
   } catch (err) {
     console.error("Gagal membaca site settings dari localStorage:", err);
     return DEFAULT_SITE_SETTINGS;

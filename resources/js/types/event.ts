@@ -1,6 +1,7 @@
 export type EventStatus = "ongoing" | "upcoming" | "past";
 
 export type EventCategory =
+  | "Trading Competition"
   | "Webinar Online"
   | "Live Trading Bareng"
   | "Workshop Khusus"

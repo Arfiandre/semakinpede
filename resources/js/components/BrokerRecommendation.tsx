@@ -198,7 +198,7 @@ export default function BrokerRecommendation() {
                 </a>
               ) : (
                 <a
-                  href={`https://wa.me/6281211119999?text=${encodeURIComponent(
+                  href={`https://wa.me/628176792110?text=${encodeURIComponent(
                     `Halo Admin Semakin Pede, saya ingin konsultasi pendaftaran pialang resmi ${activeBroker.name}.`
                   )}`}
                   target="_blank"

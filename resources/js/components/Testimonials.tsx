@@ -111,7 +111,7 @@ export default function Testimonials() {
               </span>
 
               <a
-                href="https://wa.me/6281211119999?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20bergabung%20dengan%20grup%20WhatsApp%20komunitas"
+                href="https://wa.me/628176792110?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20bergabung%20dengan%20grup%20WhatsApp%20komunitas"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition-all shadow-sm"

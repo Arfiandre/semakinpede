@@ -93,7 +93,7 @@ export default function EventRegistrationModal({
   if (!isOpen || !event) return null;
 
   const siteSettings = getSiteSettings();
-  const rawWa = siteSettings?.socialMedia?.whatsapp || "https://wa.me/6281211119999";
+  const rawWa = siteSettings?.socialMedia?.whatsapp || "https://wa.me/628176792110";
   const adminWaUrl = rawWa.startsWith("http") ? rawWa : `https://wa.me/${rawWa.replace(/[^0-9]/g, "")}`;
 
   const telegramLink =
@@ -103,7 +103,7 @@ export default function EventRegistrationModal({
 
   const tutorialLink =
     event.tutorialAccountUrl?.trim() ||
-    "https://tpfx.co.id/tutorial-buka-akun";
+    "https://drive.google.com/file/d/1kBVRqc8q6XcvHSdqVweg_Fc64Z_u79FV/view?usp=sharing";
 
   // File Upload Handlers (converts image to Base64)
   const handleFileUpload = (
@@ -376,7 +376,7 @@ export default function EventRegistrationModal({
                       <span className="text-xs font-bold text-slate-900">Sudah Punya</span>
                     </div>
                     <span className="text-[11px] text-slate-600 pl-5">
-                      Siap submit verifikasi akun pialang
+                      Siap submit verifikasi akun
                     </span>
                   </label>
 

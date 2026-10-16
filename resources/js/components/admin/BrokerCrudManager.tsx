@@ -113,7 +113,7 @@ export default function BrokerCrudManager() {
         "Penjaminan Transaksi Kliring KBI / ICH",
       ],
       actionText: "Konsultasi Pendaftaran",
-      actionUrl: "https://wa.me/6281211119999?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20konsultasi%20pendaftaran%20pialang%20resmi",
+      actionUrl: "https://wa.me/628176792110?text=Halo%20Admin%20Semakin%20Pede,%20saya%20ingin%20konsultasi%20pendaftaran%20pialang%20resmi",
       officialSiteUrl: "https://bappebti.go.id",
       isFeatured: false,
       order: brokers.length + 1,

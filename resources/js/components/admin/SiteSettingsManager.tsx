@@ -358,7 +358,7 @@ export default function SiteSettingsManager() {
                 </label>
                 <input
                   type="text"
-                  placeholder="https://wa.me/6281211119999"
+                  placeholder="https://wa.me/628176792110"
                   value={settings.socialMedia.whatsapp}
                   onChange={(e) =>
                     setSettings((prev) => ({

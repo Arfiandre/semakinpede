@@ -1,7 +1,7 @@
 import { EventItem } from "@/types/event";
 import { saveBatchEventsDB } from "@/lib/db";
 
-export const EVENT_STORAGE_KEY = "kfi_events_v3"; // Migrated to v3 for updated Trading Semakin Pede Competition
+export const EVENT_STORAGE_KEY = "kfi_events_v4"; // Migrated to v4 for Trading Competition category
 export const EVENT_UPDATE_EVENT = "kfi_events_updated";
 
 // Poster khusus Trading Competition Akhir Oktober 2026
@@ -126,7 +126,7 @@ export const DEFAULT_EVENTS: EventItem[] = [
     id: "event-trading-competition-okt-2026",
     posterImage: COMPETITION_POSTER,
     title: "Trading Semakin Pede Competition",
-    category: "Workshop Khusus",
+    category: "Trading Competition",
     status: "upcoming",
     date: "Kamis, 29 Oktober 2026 (Pendaftaran s.d. 26 Oktober 2026)",
     time: "Sesi London & New York (14.00 - 04.00 WIB)",
@@ -148,13 +148,13 @@ export const DEFAULT_EVENTS: EventItem[] = [
       "Batas Akhir Pendaftaran: 26 Oktober 2026",
       "Akun Kompetisi Resmi Didukung Pialang Legal BAPPEBTI: TPFX",
     ],
-    attendeesCount: "64 Trader Terdaftar (Slot Terbatas)",
     actionText: "Daftar Sekarang",
     actionType: "rsvp",
     telegramGroupUrl: "https://t.me/semakinpede_official",
-    tutorialAccountUrl: "https://tpfx.co.id/tutorial-buka-akun",
+    tutorialAccountUrl:
+      "https://drive.google.com/file/d/1kBVRqc8q6XcvHSdqVweg_Fc64Z_u79FV/view?usp=sharing",
     createdAt: "2026-10-12T08:00:00.000Z",
-    updatedAt: "2026-10-14T15:45:00.000Z",
+    updatedAt: "2026-10-16T13:30:00.000Z",
   },
 ];
 
@@ -163,9 +163,10 @@ export function getStoredEvents(): EventItem[] {
     return DEFAULT_EVENTS;
   }
   try {
-    // Clear out any old v1/v2 cached data if present
+    // Clear out any old v1/v2/v3 cached data if present
     localStorage.removeItem("kfi_events");
     localStorage.removeItem("kfi_events_v2");
+    localStorage.removeItem("kfi_events_v3");
 
     const raw = localStorage.getItem(EVENT_STORAGE_KEY);
     if (!raw) {
