@@ -247,3 +247,84 @@ export function resetToDefaultEvents(): EventItem[] {
   saveStoredEvents(DEFAULT_EVENTS);
   return DEFAULT_EVENTS;
 }
+
+/**
+ * Normalisasi objek event baik dari backend Laravel (snake_case)
+ * maupun frontend (camelCase) menjadi EventItem standar.
+ */
+export function normalizeEventItem(raw: any): EventItem {
+  if (!raw) return DEFAULT_EVENTS[0];
+
+  const startDateStr = raw.startDate || raw.start_date
+    ? String(raw.startDate || raw.start_date).slice(0, 10)
+    : undefined;
+  const endDateStr = raw.endDate || raw.end_date
+    ? String(raw.endDate || raw.end_date).slice(0, 10)
+    : undefined;
+
+  let keyTakeaways = raw.keyTakeaways || raw.key_takeaways || [];
+  if (typeof keyTakeaways === "string") {
+    try {
+      keyTakeaways = JSON.parse(keyTakeaways);
+    } catch {
+      keyTakeaways = keyTakeaways.split("\n").filter(Boolean);
+    }
+  }
+
+  return {
+    id: raw.id || `event-${Date.now()}`,
+    posterImage: raw.posterImage || raw.poster_image || PRESET_POSTERS[0].dataUrl,
+    title: raw.title || "",
+    date: raw.date || "",
+    time: raw.time || undefined,
+    description: raw.description || "",
+    category: raw.category || "Trading Competition",
+    status: raw.status || "upcoming",
+    location: raw.location || undefined,
+    speaker: raw.speaker || undefined,
+    startDate: startDateStr,
+    endDate: endDateStr,
+    startTime: raw.startTime || raw.start_time || undefined,
+    endTime: raw.endTime || raw.end_time || undefined,
+    meetingUrl: raw.meetingUrl || raw.meeting_url || undefined,
+    tradingSession: raw.tradingSession || raw.trading_session || undefined,
+    targetInstrument: raw.targetInstrument || raw.target_instrument || undefined,
+    tradingPlatform: raw.tradingPlatform || raw.trading_platform || undefined,
+    workshopSubtype: raw.workshopSubtype || raw.workshop_subtype || undefined,
+    prizePool: raw.prizePool || raw.prize_pool || undefined,
+    maxDrawdown: raw.maxDrawdown || raw.max_drawdown || undefined,
+    registrationDeadline: raw.registrationDeadline || raw.registration_deadline || undefined,
+    venueCity: raw.venueCity || raw.venue_city || undefined,
+    venueAddress: raw.venueAddress || raw.venue_address || undefined,
+    seatQuota: raw.seatQuota || raw.seat_quota ? Number(raw.seatQuota || raw.seat_quota) : undefined,
+    keyTakeaways: Array.isArray(keyTakeaways) ? keyTakeaways : [],
+    attendeesCount: raw.attendeesCount || raw.attendees_count || undefined,
+    actionText: raw.actionText || raw.action_text || "Daftar Sekarang",
+    actionType: raw.actionType || raw.action_type || "rsvp",
+    recapNote: raw.recapNote || raw.recap_note || undefined,
+    telegramGroupUrl: raw.telegramGroupUrl || raw.telegram_group_url || undefined,
+    tutorialAccountUrl: raw.tutorialAccountUrl || raw.tutorial_account_url || undefined,
+    createdAt: raw.createdAt || raw.created_at || undefined,
+    updatedAt: raw.updatedAt || raw.updated_at || undefined,
+  };
+}
+
+/**
+ * Memperbarui teks tanggal pada SVG poster bawaan jika menggunakan template kompetisi
+ */
+export function updatePosterDateText(
+  svgPoster: string,
+  dateLabel: string,
+  deadlineLabel?: string
+): string {
+  if (!svgPoster || !svgPoster.includes("data:image/svg+xml")) return svgPoster;
+
+  const textToInsert = deadlineLabel
+    ? `${dateLabel} (Daftar s.d ${deadlineLabel})`
+    : dateLabel;
+
+  return svgPoster.replace(
+    /<text x='319' y='288'[^>]*>.*?<\/text>/,
+    `<text x='319' y='288' fill='%2394A3B8' font-family='system-ui, sans-serif' font-size='13'>${textToInsert}</text>`
+  );
+}

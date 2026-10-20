@@ -15,7 +15,14 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import LatestEventPopupModal from "@/components/LatestEventPopupModal";
 import { Head } from "@inertiajs/react";
 
-export default function Home() {
+interface HomeProps {
+  events?: any[];
+  brokers?: any[];
+  settings?: any;
+  news?: any[];
+}
+
+export default function Home({ events = [] }: HomeProps) {
   return (
     <>
       <Head>
@@ -47,7 +54,7 @@ export default function Home() {
         <LearningPaths />
 
         {/* Section 5: Bagan Event Terkini, Akan Datang & Arsip Semakin Pede */}
-        <EventSection />
+        <EventSection initialEvents={events} />
 
         {/* Section 6: Trading Journal & Risk Discipline Heatmap */}
         <TradingJournal />
@@ -72,7 +79,7 @@ export default function Home() {
       <WhatsAppButton />
 
       {/* Pop-up Modal Event Terkini (Otomatis muncul 5 detik setelah landing) */}
-      <LatestEventPopupModal />
+      <LatestEventPopupModal initialEvents={events} />
     </>
   );
 }

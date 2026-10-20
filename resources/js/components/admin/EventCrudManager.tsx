@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Calendar,
   Clock,
@@ -30,6 +30,7 @@ import {
 import { EventItem, EventStatus, EventCategory } from "@/types/event";
 import {
   getStoredEvents,
+  saveStoredEvents,
   addEvent,
   updateEvent,
   deleteEvent,
@@ -37,6 +38,8 @@ import {
   PRESET_POSTERS,
   formatEventDateFromInputs,
   formatEventTimeFromInputs,
+  normalizeEventItem,
+  updatePosterDateText,
 } from "@/lib/eventStorage";
 
 interface FormState {
@@ -128,7 +131,13 @@ const emptyForm: FormState = {
     "https://drive.google.com/file/d/1kBVRqc8q6XcvHSdqVweg_Fc64Z_u79FV/view?usp=sharing",
 };
 
-export default function EventCrudManager() {
+interface EventCrudManagerProps {
+  initialEvents?: any[];
+}
+
+export default function EventCrudManager({
+  initialEvents = [],
+}: EventCrudManagerProps) {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<EventStatus | "all">("all");
@@ -153,13 +162,36 @@ export default function EventCrudManager() {
   // Poster preview modal
   const [previewPosterUrl, setPreviewPosterUrl] = useState<string | null>(null);
 
-  const loadEvents = () => {
-    setEvents(getStoredEvents());
-  };
+  const loadEvents = useCallback(async () => {
+    // 1. Initial load dari props server atau localStorage
+    if (Array.isArray(initialEvents) && initialEvents.length > 0) {
+      const mapped = initialEvents.map(normalizeEventItem);
+      setEvents(mapped);
+    } else {
+      setEvents(getStoredEvents());
+    }
+
+    // 2. Fetch data realtime dari database server
+    try {
+      const res = await fetch("/api/events", {
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const serverData = await res.json();
+        if (Array.isArray(serverData) && serverData.length > 0) {
+          const mapped = serverData.map(normalizeEventItem);
+          setEvents(mapped);
+          saveStoredEvents(mapped);
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+  }, [initialEvents]);
 
   useEffect(() => {
     loadEvents();
-  }, []);
+  }, [loadEvents]);
 
   // Keyboard accessibility: close on ESC
   useEffect(() => {
@@ -289,7 +321,7 @@ export default function EventCrudManager() {
   const computedTimeLabel = formatEventTimeFromInputs(form.startTime, form.endTime);
 
   // Form Submission
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validasi 1: Nama Event
@@ -335,6 +367,12 @@ export default function EventCrudManager() {
       .filter((t) => t.length > 0);
 
     const posterToSave = form.posterImage.trim() || PRESET_POSTERS[0].dataUrl;
+    // Perbarui teks tanggal pada poster SVG jika menggunakan template bawaan
+    const finalPoster = updatePosterDateText(
+      posterToSave,
+      computedDateLabel,
+      form.registrationDeadline
+    );
 
     // Menentukan lokasi dan pembicara kontekstual
     let resolvedLocation = "";
@@ -360,7 +398,7 @@ export default function EventCrudManager() {
     }
 
     const eventPayload: Omit<EventItem, "id" | "createdAt" | "updatedAt"> = {
-      posterImage: posterToSave,
+      posterImage: finalPoster,
       title: form.title.trim(),
       date: computedDateLabel,
       time: computedTimeLabel,
@@ -391,6 +429,8 @@ export default function EventCrudManager() {
       tutorialAccountUrl: form.tutorialAccountUrl.trim() || undefined,
     };
 
+    let targetId = form.id;
+
     if (isEditing && form.id) {
       const updated = updateEvent(form.id, eventPayload);
       if (updated) {
@@ -398,7 +438,34 @@ export default function EventCrudManager() {
       }
     } else {
       const created = addEvent(eventPayload);
+      targetId = created.id;
       showToast(`Event "${created.title}" berhasil ditambahkan.`);
+    }
+
+    // Sinkronisasi otomatis ke database Laravel server
+    try {
+      const payloadToSend = {
+        ...eventPayload,
+        id: targetId,
+      };
+
+      if (typeof window !== "undefined" && (window as any).axios) {
+        await (window as any).axios.post("/api/events", payloadToSend);
+      } else {
+        const csrf = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+        await fetch("/api/events", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-CSRF-TOKEN": csrf,
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: JSON.stringify(payloadToSend),
+        });
+      }
+    } catch (err) {
+      console.warn("Gagal sinkronisasi event ke database server:", err);
     }
 
     setIsModalOpen(false);
@@ -406,13 +473,34 @@ export default function EventCrudManager() {
   };
 
   // Delete Action
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    const ok = deleteEvent(deleteTarget.id);
+    const targetId = deleteTarget.id;
+    const ok = deleteEvent(targetId);
     if (ok) {
       showToast(`Event "${deleteTarget.title}" berhasil dihapus.`);
       loadEvents();
     }
+
+    // Hapus juga dari backend database server
+    try {
+      if (typeof window !== "undefined" && (window as any).axios) {
+        await (window as any).axios.delete(`/api/events/${targetId}`);
+      } else {
+        const csrf = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+        await fetch(`/api/events/${targetId}`, {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json",
+            "X-CSRF-TOKEN": csrf,
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("Gagal menghapus event dari server:", err);
+    }
+
     setDeleteTarget(null);
   };
 

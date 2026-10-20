@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\Route;
 // Public Landing Page
 Route::get('/', [LandingController::class, 'index'])->name('home');
 
+// Public Events Feed (Read-only for real-time landing page & modal updates)
+Route::get('/api/events', [EventController::class, 'index'])->name('events.public');
+Route::get('/api/brokers', [BrokerController::class, 'index'])->name('brokers.public');
+Route::get('/api/settings', [SettingController::class, 'index'])->name('settings.public');
+
 // Public Leads Capture - Rate limited to 10 requests / minute per IP
 Route::post('/api/leads', [LeadController::class, 'store'])
     ->middleware('throttle:10,1')

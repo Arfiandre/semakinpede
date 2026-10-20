@@ -18,14 +18,25 @@ import {
 import { EventItem, EventStatus } from "@/types/event";
 import {
   getStoredEvents,
+  saveStoredEvents,
   EVENT_UPDATE_EVENT,
   DEFAULT_EVENTS,
+  normalizeEventItem,
 } from "@/lib/eventStorage";
 import { getSiteSettings } from "@/lib/siteSettingsStorage";
 import EventRegistrationModal from "@/components/EventRegistrationModal";
 
-export default function EventSection() {
-  const [events, setEvents] = useState<EventItem[]>(DEFAULT_EVENTS);
+interface EventSectionProps {
+  initialEvents?: any[];
+}
+
+export default function EventSection({ initialEvents = [] }: EventSectionProps) {
+  const [events, setEvents] = useState<EventItem[]>(() => {
+    if (Array.isArray(initialEvents) && initialEvents.length > 0) {
+      return initialEvents.map(normalizeEventItem);
+    }
+    return getStoredEvents();
+  });
   const [filter, setFilter] = useState<EventStatus | "all">("all");
   const [selectedRecap, setSelectedRecap] = useState<EventItem | null>(null);
   const [previewPoster, setPreviewPoster] = useState<{
@@ -36,10 +47,36 @@ export default function EventSection() {
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
 
   useEffect(() => {
-    // Initial load from localStorage
-    setEvents(getStoredEvents());
+    // 1. Jika ada initialEvents dari server Laravel, gunakan dan sinkronkan ke cache
+    if (Array.isArray(initialEvents) && initialEvents.length > 0) {
+      const mapped = initialEvents.map(normalizeEventItem);
+      setEvents(mapped);
+      saveStoredEvents(mapped);
+    } else {
+      setEvents(getStoredEvents());
+    }
 
-    // Listen for updates from superadmin CRUD
+    // 2. Fetch realtime data terkini dari endpoint publik /api/events
+    const fetchFreshEvents = async () => {
+      try {
+        const res = await fetch("/api/events", {
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const serverData = await res.json();
+          if (Array.isArray(serverData) && serverData.length > 0) {
+            const mapped = serverData.map(normalizeEventItem);
+            setEvents(mapped);
+            saveStoredEvents(mapped);
+          }
+        }
+      } catch {
+        // Fallback ke cache lokal
+      }
+    };
+    fetchFreshEvents();
+
+    // 3. Listen for updates from superadmin CRUD
     const handleUpdate = () => {
       setEvents(getStoredEvents());
     };
@@ -51,7 +88,7 @@ export default function EventSection() {
       window.removeEventListener(EVENT_UPDATE_EVENT, handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
-  }, []);
+  }, [initialEvents]);
 
   const filteredEvents = events.filter((ev) => {
     if (filter === "all") return true;

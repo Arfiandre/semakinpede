@@ -67,7 +67,10 @@ interface DashboardProps {
 
 const STORAGE_KEY = "kfi_leads";
 
-export default function AdminPage({ initialLeads = [] }: DashboardProps) {
+export default function AdminPage({
+  initialLeads = [],
+  initialEvents = [],
+}: DashboardProps) {
   const [activeTab, setActiveTab] = useState<
     "events" | "brokers" | "news" | "settings" | "leads" | "database" | "participants"
   >("events");
@@ -615,7 +618,7 @@ export default function AdminPage({ initialLeads = [] }: DashboardProps) {
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* TAB 1: KELOLA EVENT (CRUD) */}
-        {activeTab === "events" && <EventCrudManager />}
+        {activeTab === "events" && <EventCrudManager initialEvents={initialEvents} />}
 
         {/* TAB 2: KELOLA KEMITRAAN PIALANG RESMI (CRUD) */}
         {activeTab === "brokers" && <BrokerCrudManager />}

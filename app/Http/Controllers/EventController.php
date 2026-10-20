@@ -12,7 +12,7 @@ class EventController extends Controller
 {
     public function index(): JsonResponse
     {
-        return response()->json(Event::all());
+        return response()->json(Event::orderBy('start_date', 'asc')->get());
     }
 
     public function store(Request $request): JsonResponse
@@ -75,7 +75,7 @@ class EventController extends Controller
             'tutorialAccountUrl' => 'nullable|string|max:500',
         ]);
 
-        $id = $validated['id'] ?? ('event-' . Str::uuid());
+        $id = $validated['id'] ?? ('event-'.Str::uuid());
 
         $data = [
             'id' => $id,
@@ -115,9 +115,9 @@ class EventController extends Controller
         $event = Event::updateOrCreate(['id' => $id], $data);
 
         AuditLog::create([
-            'id' => 'audit-' . Str::uuid(),
+            'id' => 'audit-'.Str::uuid(),
             'action' => 'event_saved',
-            'details' => 'Event disimpan: ' . $event->title,
+            'details' => 'Event disimpan: '.$event->title,
             'operator' => auth()->user()?->username ?? 'superadmin',
             'timestamp' => now(),
         ]);
@@ -136,9 +136,9 @@ class EventController extends Controller
             $event->delete();
 
             AuditLog::create([
-                'id' => 'audit-' . Str::uuid(),
+                'id' => 'audit-'.Str::uuid(),
                 'action' => 'event_deleted',
-                'details' => 'Event dihapus: ' . $title,
+                'details' => 'Event dihapus: '.$title,
                 'operator' => auth()->user()?->username ?? 'superadmin',
                 'timestamp' => now(),
             ]);

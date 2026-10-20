@@ -15,36 +15,69 @@ import {
 import { EventItem } from "@/types/event";
 import {
   getStoredEvents,
+  saveStoredEvents,
   EVENT_UPDATE_EVENT,
   DEFAULT_EVENTS,
+  normalizeEventItem,
 } from "@/lib/eventStorage";
 import { getSiteSettings } from "@/lib/siteSettingsStorage";
 import EventRegistrationModal from "@/components/EventRegistrationModal";
 
 const POPUP_DISMISSED_KEY = "kfi_latest_event_popup_dismissed_v2";
 
-export default function LatestEventPopupModal() {
+interface LatestEventPopupModalProps {
+  initialEvents?: any[];
+}
+
+export default function LatestEventPopupModal({
+  initialEvents = [],
+}: LatestEventPopupModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [event, setEvent] = useState<EventItem | null>(null);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
 
   // Helper untuk memilih event terkini (prioritas: ongoing, lalu upcoming, lalu pertama)
   const selectLatestEvent = useCallback(() => {
-    const list = getStoredEvents();
+    let list: EventItem[] = [];
+    if (Array.isArray(initialEvents) && initialEvents.length > 0) {
+      list = initialEvents.map(normalizeEventItem);
+    } else {
+      list = getStoredEvents();
+    }
     if (!list || list.length === 0) return null;
     const ongoing = list.find((e) => e.status === "ongoing");
     if (ongoing) return ongoing;
     const upcoming = list.find((e) => e.status === "upcoming");
     if (upcoming) return upcoming;
     return list[0] || null;
-  }, []);
+  }, [initialEvents]);
 
   useEffect(() => {
-    // Ambil event terkini
+    // 1. Ambil event terkini dari props / storage
     const current = selectLatestEvent();
     setEvent(current);
 
-    // Pasang timer 5 detik (5000ms) setelah landing page selesai mendarat
+    // 2. Fetch realtime data terkini dari /api/events
+    const fetchFresh = async () => {
+      try {
+        const res = await fetch("/api/events", {
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const serverData = await res.json();
+          if (Array.isArray(serverData) && serverData.length > 0) {
+            const mapped = serverData.map(normalizeEventItem);
+            saveStoredEvents(mapped);
+            const ongoing = mapped.find((e) => e.status === "ongoing");
+            const upcoming = mapped.find((e) => e.status === "upcoming");
+            setEvent(ongoing || upcoming || mapped[0] || null);
+          }
+        }
+      } catch {}
+    };
+    fetchFresh();
+
+    // 3. Pasang timer 5 detik (5000ms) setelah landing page selesai mendarat
     const timer = setTimeout(() => {
       try {
         const isDismissed = sessionStorage.getItem(POPUP_DISMISSED_KEY);
