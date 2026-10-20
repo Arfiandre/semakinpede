@@ -19,7 +19,8 @@ class AdminController extends Controller
         $brokers = Broker::orderBy('order', 'asc')->get();
         $news = EconomicNews::limit(100)->get();
         $settings = SiteSetting::first();
-        $leads = Lead::orderBy('created_at', 'desc')->get();
+        $rawLeads = Lead::orderBy('created_at', 'desc')->get();
+        $leads = LeadController::deduplicateCollection($rawLeads)->values();
         $auditLogs = AuditLog::orderBy('timestamp', 'desc')->limit(50)->get();
 
         $stats = [
@@ -46,13 +47,15 @@ class AdminController extends Controller
 
     public function participants(): Response
     {
-        $participants = Lead::whereNotNull('event_id')
+        $rawParticipants = Lead::whereNotNull('event_id')
             ->orWhereNotNull('event_title')
             ->orWhereNotNull('demo_account_number')
             ->orWhereNotNull('has_account')
             ->orWhere('source', 'like', '%event%')
             ->orderBy('created_at', 'desc')
             ->get();
+
+        $participants = LeadController::deduplicateCollection($rawParticipants)->values();
 
         return Inertia::render('Admin/Participants', [
             'initialParticipants' => $participants,

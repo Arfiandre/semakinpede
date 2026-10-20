@@ -167,20 +167,68 @@ async function performTransaction<T>(
 
 // ----------------- OPERASI LEADS -----------------
 
+export function deduplicateDBLeads(leads: DBLead[]): DBLead[] {
+  const map = new Map<string, DBLead>();
+  for (const lead of leads) {
+    let key: string;
+    const digits = (lead.contact || "").replace(/[^0-9]/g, "");
+    const suffix = digits.length >= 8 ? digits.slice(-9) : (lead.contact || "");
+
+    if (lead.demoAccountNumber && lead.demoAccountNumber.trim().length >= 4) {
+      key = `demo:${lead.demoAccountNumber.trim()}`;
+    } else if (lead.eventId && suffix) {
+      key = `event:${lead.eventId}:${suffix}`;
+    } else if (lead.eventTitle && suffix) {
+      key = `event_title:${lead.eventTitle}:${suffix}`;
+    } else if (suffix && lead.name && lead.name !== "-") {
+      key = `lead:${suffix}:${lead.name.toLowerCase().trim()}`;
+    } else {
+      key = `id:${lead.id}`;
+    }
+
+    if (!map.has(key)) {
+      map.set(key, lead);
+    } else {
+      const existing = map.get(key)!;
+      const preferLead =
+        (!existing.demoAccountNumber && Boolean(lead.demoAccountNumber)) ||
+        (!existing.screenshotRealAccount && Boolean(lead.screenshotRealAccount));
+
+      if (preferLead) {
+        map.set(key, { ...existing, ...lead });
+      } else {
+        map.set(key, { ...lead, ...existing });
+      }
+    }
+  }
+  return Array.from(map.values());
+}
+
 export async function insertLeadDB(lead: DBLead): Promise<void> {
   try {
     await performTransaction("leads", "readwrite", (store) => {
       store.put(lead);
     });
-    await addAuditLogDB("INSERT_LEAD", `Lead baru: ${lead.name} (${lead.contactType})`);
+    await addAuditLogDB("INSERT_LEAD", `Lead: ${lead.name} (${lead.contactType})`);
   } catch (err) {
     console.warn("Gagal menyimpan lead ke IndexedDB:", err);
   }
 
   // Sinkronisasi otomatis ke backend Laravel
   try {
-    if (typeof window !== "undefined" && (window as any).axios) {
-      await (window as any).axios.post("/api/leads", lead);
+    if (typeof window !== "undefined") {
+      if ((window as any).axios) {
+        await (window as any).axios.post("/api/leads", lead);
+      } else {
+        await fetch("/api/leads", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(lead),
+        });
+      }
     }
   } catch (err) {
     console.warn("Gagal sinkronisasi lead ke server Laravel:", err);
@@ -189,9 +237,10 @@ export async function insertLeadDB(lead: DBLead): Promise<void> {
 
 export async function getAllLeadsDB(): Promise<DBLead[]> {
   try {
-    return await performTransaction<DBLead[]>("leads", "readonly", (store) => {
+    const raw = await performTransaction<DBLead[]>("leads", "readonly", (store) => {
       return store.getAll();
     });
+    return Array.isArray(raw) ? deduplicateDBLeads(raw) : [];
   } catch (err) {
     console.warn("Gagal membaca leads dari IndexedDB:", err);
     return [];
@@ -202,6 +251,8 @@ export async function deleteLeadDB(id: string): Promise<void> {
   try {
     await performTransaction("leads", "readwrite", (store) => {
       store.delete(id);
+      const altId = id.startsWith("lead-") ? id.slice(5) : `lead-${id}`;
+      store.delete(altId);
     });
     await addAuditLogDB("DELETE_LEAD", `Menghapus lead id: ${id}`);
   } catch (err) {

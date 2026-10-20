@@ -137,4 +137,128 @@ class CompetitionParticipantTest extends TestCase
 
         $this->assertDatabaseMissing('leads', ['id' => 'lead-to-delete-123']);
     }
+
+    public function test_submitting_step1_then_step2_updates_record_without_duplication(): void
+    {
+        $step1Payload = [
+            'id' => 'lead-user-step-test',
+            'name' => 'Peserta Unik',
+            'contactType' => 'wa',
+            'contact' => '081299998888',
+            'level' => 'Peserta Event',
+            'source' => 'event_registration_step1',
+            'eventId' => 'event-trading-competition-okt-2026',
+            'eventTitle' => 'Trading Semakin Pede Competition',
+            'hasAccount' => 'sudah',
+        ];
+
+        // Step 1 Submission
+        $res1 = $this->postJson('/api/leads', $step1Payload);
+        $res1->assertStatus(201);
+        $this->assertDatabaseCount('leads', 1);
+
+        $step2Payload = [
+            'id' => 'lead-user-step-test',
+            'name' => 'Peserta Unik',
+            'contactType' => 'wa',
+            'contact' => '081299998888',
+            'level' => 'Verifikasi Akun Event Selesai',
+            'source' => 'event_trading_account_submitted',
+            'eventId' => 'event-trading-competition-okt-2026',
+            'eventTitle' => 'Trading Semakin Pede Competition',
+            'hasAccount' => 'sudah',
+            'demoAccountNumber' => '654321',
+            'demoInvestorPassword' => 'SecretInvestor1',
+            'screenshotRealAccount' => 'real.jpg',
+            'screenshotTransfer' => 'tf.jpg',
+        ];
+
+        // Step 2 Submission (same ID and/or same contact+event)
+        $res2 = $this->postJson('/api/leads', $step2Payload);
+        $res2->assertStatus(200);
+        $res2->assertJson([
+            'success' => true,
+        ]);
+
+        // Verify NO duplicate record was created
+        $this->assertDatabaseCount('leads', 1);
+        $this->assertDatabaseHas('leads', [
+            'id' => 'lead-user-step-test',
+            'name' => 'Peserta Unik',
+            'demo_account_number' => '654321',
+            'source' => 'event_trading_account_submitted',
+        ]);
+    }
+
+    public function test_submitting_duplicate_contact_without_client_id_still_updates_existing_lead(): void
+    {
+        $lead1 = [
+            'name' => 'Andi Wijaya',
+            'contact' => '085711223344',
+            'eventId' => 'event-trading-competition-okt-2026',
+            'source' => 'event_registration_step1',
+        ];
+
+        $res1 = $this->postJson('/api/leads', $lead1);
+        $res1->assertStatus(201);
+        $this->assertDatabaseCount('leads', 1);
+
+        // Second submission without 'id', but same phone and event
+        $lead2 = [
+            'name' => 'Andi Wijaya',
+            'contact' => '+6285711223344',
+            'eventId' => 'event-trading-competition-okt-2026',
+            'demoAccountNumber' => '888777',
+            'demoInvestorPassword' => 'Pass888',
+        ];
+
+        $res2 = $this->postJson('/api/leads', $lead2);
+        $res2->assertStatus(200);
+
+        // Verify still only 1 record exists in database
+        $this->assertDatabaseCount('leads', 1);
+        $this->assertDatabaseHas('leads', [
+            'demo_account_number' => '888777',
+        ]);
+    }
+
+    public function test_participants_api_returns_deduplicated_list(): void
+    {
+        $user = User::factory()->create();
+
+        // Seed 2 duplicate records for the same participant with different IDs
+        Lead::create([
+            'id' => 'lead-dup-1',
+            'name' => 'Peserta Ganda',
+            'contact_type' => 'wa',
+            'contact' => '081333444555',
+            'level' => 'Peserta Event',
+            'source' => 'event_registration_step1',
+            'event_id' => 'event-1',
+            'submitted_at' => now()->subMinute(),
+        ]);
+
+        Lead::create([
+            'id' => 'lead-dup-2',
+            'name' => 'Peserta Ganda',
+            'contact_type' => 'wa',
+            'contact' => '081333444555',
+            'level' => 'Verifikasi Akun Event Selesai',
+            'source' => 'event_trading_account_submitted',
+            'event_id' => 'event-1',
+            'demo_account_number' => '112233',
+            'demo_investor_password' => 'PassDemo',
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertDatabaseCount('leads', 2);
+
+        $response = $this->actingAs($user)->getJson('/api/participants');
+        $response->assertStatus(200);
+
+        $data = $response->json();
+        // Collection should be deduplicated to 1 item
+        $this->assertCount(1, $data);
+        $this->assertEquals('112233', $data[0]['demo_account_number']);
+    }
 }

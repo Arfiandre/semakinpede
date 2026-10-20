@@ -82,16 +82,58 @@ export default function CompetitionParticipantsManager({
     setIsLoading(true);
     const combinedMap = new Map<string, ParticipantItem>();
 
+    const upsertParticipant = (item: ParticipantItem) => {
+      let key = `id:${item.id}`;
+      const digits = (item.contact || "").replace(/[^0-9]/g, "");
+      const suffix = digits.length >= 8 ? digits.slice(-9) : (item.contact || "");
+
+      if (item.eventId && suffix) {
+        key = `event:${item.eventId}:${suffix}`;
+      } else if (item.eventTitle && suffix) {
+        key = `event_title:${item.eventTitle}:${suffix}`;
+      } else if (item.demoAccountNumber && item.demoAccountNumber.trim().length >= 4) {
+        key = `demo:${item.demoAccountNumber.trim()}`;
+      } else if (suffix && item.name && item.name !== "-") {
+        key = `part:${suffix}:${item.name.toLowerCase().trim()}`;
+      }
+
+      if (!combinedMap.has(key)) {
+        combinedMap.set(key, item);
+      } else {
+        const existing = combinedMap.get(key)!;
+        const preferNew =
+          (!existing.demoAccountNumber && Boolean(item.demoAccountNumber)) ||
+          (!existing.screenshotRealAccount && Boolean(item.screenshotRealAccount)) ||
+          (existing.name === "-" && item.name !== "-");
+
+        if (preferNew) {
+          combinedMap.set(key, {
+            ...existing,
+            ...item,
+            id: existing.id && !existing.id.startsWith("lead-") ? existing.id : item.id,
+            notes: item.notes || existing.notes,
+          });
+        } else {
+          combinedMap.set(key, {
+            ...item,
+            ...existing,
+            demoAccountNumber: existing.demoAccountNumber || item.demoAccountNumber,
+            demoInvestorPassword: existing.demoInvestorPassword || item.demoInvestorPassword,
+            screenshotRealAccount: existing.screenshotRealAccount || item.screenshotRealAccount,
+            screenshotTransfer: existing.screenshotTransfer || item.screenshotTransfer,
+          });
+        }
+      }
+    };
+
     // 1. Load from Initial Data prop
     if (Array.isArray(initialData)) {
-      initialData.forEach((item) => {
-        combinedMap.set(item.id, item);
-      });
+      initialData.forEach(upsertParticipant);
     }
 
     // 2. Fetch from Backend Laravel API
     try {
-      const res = await fetch("/api/leads", {
+      const res = await fetch("/api/participants", {
         headers: { Accept: "application/json" },
       });
       if (res.ok) {
@@ -116,7 +158,6 @@ export default function CompetitionParticipantsManager({
               screenshotTransfer: l.screenshot_transfer || l.screenshotTransfer || undefined,
             };
 
-            // Filter: only event registrations or competition leads
             const isEventParticipant =
               Boolean(mapped.eventId) ||
               Boolean(mapped.eventTitle) ||
@@ -125,7 +166,7 @@ export default function CompetitionParticipantsManager({
               mapped.source.toLowerCase().includes("event");
 
             if (isEventParticipant) {
-              combinedMap.set(mapped.id, mapped);
+              upsertParticipant(mapped);
             }
           });
         }
@@ -147,7 +188,7 @@ export default function CompetitionParticipantsManager({
             l.source.toLowerCase().includes("event");
 
           if (isEventParticipant) {
-            combinedMap.set(l.id, {
+            upsertParticipant({
               id: l.id,
               name: l.name,
               contactType: l.contactType,

@@ -65,6 +65,7 @@ export default function EventRegistrationModal({
   // Validation & Loading
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentLeadId, setCurrentLeadId] = useState<string>("");
 
   // Refs for hidden file inputs
   const realAccountInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +77,7 @@ export default function EventRegistrationModal({
       setCurrentStep("step1_initial");
       setErrorMessage("");
       setIsSubmitting(false);
+      setCurrentLeadId("");
     }
   }, [isOpen, event]);
 
@@ -141,6 +143,7 @@ export default function EventRegistrationModal({
   // Submit Step 1
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setErrorMessage("");
 
     if (!name.trim()) {
@@ -159,34 +162,46 @@ export default function EventRegistrationModal({
       return;
     }
 
-    // Simpan lead awal ke IndexedDB
-    const leadInitial: DBLead = {
-      id: "lead-" + Date.now(),
-      name: name.trim(),
-      contactType: "wa",
-      contact: cleanPhone,
-      level: "Peserta Event",
-      source: "event_registration_step1",
-      timestamp: new Date().toISOString(),
-      notes: `Pendaftaran event: "${event.title}". Sudah punya akun: ${hasAccount}`,
-      eventId: event.id,
-      eventTitle: event.title,
-      hasAccount,
-    };
-    await insertLeadDB(leadInitial);
+    setIsSubmitting(true);
 
-    if (hasAccount === "belum") {
-      // Muncul modal notifikasi registrasi berhasil + link tutorial & link submit akun
-      setCurrentStep("step1_not_registered_modal");
-    } else {
-      // Langsung direct ke form submit akun trading
-      setCurrentStep("step2_trading_account");
+    try {
+      const activeLeadId = currentLeadId || `lead-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      setCurrentLeadId(activeLeadId);
+
+      // Simpan lead awal ke IndexedDB & sinkronisasi ke server (menggunakan ID yang konsisten)
+      const leadInitial: DBLead = {
+        id: activeLeadId,
+        name: name.trim(),
+        contactType: "wa",
+        contact: cleanPhone,
+        level: "Peserta Event",
+        source: "event_registration_step1",
+        timestamp: new Date().toISOString(),
+        notes: `Pendaftaran event: "${event.title}". Sudah punya akun: ${hasAccount}`,
+        eventId: event.id,
+        eventTitle: event.title,
+        hasAccount,
+      };
+      await insertLeadDB(leadInitial);
+
+      if (hasAccount === "belum") {
+        // Muncul modal notifikasi registrasi berhasil + link tutorial & link submit akun
+        setCurrentStep("step1_not_registered_modal");
+      } else {
+        // Langsung direct ke form submit akun trading
+        setCurrentStep("step2_trading_account");
+      }
+    } catch {
+      setErrorMessage("Terjadi kendala saat menyimpan pendaftaran. Silakan coba kembali.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Submit Step 2
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setErrorMessage("");
 
     if (!screenshotRealAccount) {
@@ -218,9 +233,11 @@ export default function EventRegistrationModal({
     setIsSubmitting(true);
 
     try {
-      // Simpan kelengkapan akun trading ke IndexedDB
+      // Gunakan leadId yang sama dari Step 1 agar memperbarui record (bukan membuat duplikat baru)
+      const activeLeadId = currentLeadId || `lead-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
       const leadFull: DBLead = {
-        id: "reg-" + Date.now(),
+        id: activeLeadId,
         name: name.trim() || "Peserta Event",
         contactType: "wa",
         contact: phone.replace(/[^0-9+]/g, "") || "0812xxxx",
@@ -414,10 +431,20 @@ export default function EventRegistrationModal({
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-extrabold text-sm tracking-wide transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-full py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-extrabold text-sm tracking-wide transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Lanjutkan Pendaftaran</span>
-                  <ChevronRight className="w-4 h-4" />
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Menyimpan Pendaftaran...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Lanjutkan Pendaftaran</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </div>
             </form>

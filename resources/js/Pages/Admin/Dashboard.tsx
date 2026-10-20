@@ -103,11 +103,43 @@ export default function AdminPage({ initialLeads = [] }: DashboardProps) {
     try {
       const combinedMap = new Map<string, Lead>();
 
+      const getLeadKey = (item: any): string => {
+        const contact = (item.contact || "").trim();
+        const digits = contact.replace(/[^0-9]/g, "");
+        const suffix = digits.length >= 8 ? digits.slice(-9) : contact;
+        const name = (item.name || "").trim().toLowerCase();
+        if (suffix && name && name !== "-") {
+          return `contact:${suffix}:${name}`;
+        }
+        if (suffix) {
+          return `phone:${suffix}`;
+        }
+        return `id:${item.id || Math.random()}`;
+      };
+
+      const upsertLead = (leadObj: Lead) => {
+        const key = getLeadKey(leadObj);
+        if (!combinedMap.has(key)) {
+          combinedMap.set(key, leadObj);
+        } else {
+          const existing = combinedMap.get(key)!;
+          // Prefer existing server ID or non-hyphen name
+          combinedMap.set(key, {
+            ...leadObj,
+            ...existing,
+            name: existing.name !== "-" ? existing.name : leadObj.name,
+            timestamp:
+              new Date(leadObj.timestamp).getTime() > new Date(existing.timestamp).getTime()
+                ? leadObj.timestamp
+                : existing.timestamp,
+          });
+        }
+      };
+
       // 1. Initial Leads dari database Laravel
       if (Array.isArray(initialLeads)) {
         initialLeads.forEach((l: any) => {
-          const key = l.id || `${l.name}-${l.contact}`;
-          combinedMap.set(key, {
+          upsertLead({
             id: l.id,
             name: l.name || "-",
             contactType: (l.contact_type || l.contactType || "wa") as any,
@@ -128,8 +160,7 @@ export default function AdminPage({ initialLeads = [] }: DashboardProps) {
           const serverData = await res.json();
           if (Array.isArray(serverData)) {
             serverData.forEach((l: any) => {
-              const key = l.id || `${l.name}-${l.contact}`;
-              combinedMap.set(key, {
+              upsertLead({
                 id: l.id,
                 name: l.name || "-",
                 contactType: (l.contact_type || l.contactType || "wa") as any,
@@ -150,10 +181,15 @@ export default function AdminPage({ initialLeads = [] }: DashboardProps) {
           const localList = JSON.parse(raw);
           if (Array.isArray(localList)) {
             localList.forEach((l: any) => {
-              const key = l.id || `${l.name}-${l.contact}`;
-              if (!combinedMap.has(key)) {
-                combinedMap.set(key, l);
-              }
+              upsertLead({
+                id: l.id,
+                name: l.name || "-",
+                contactType: (l.contact_type || l.contactType || "wa") as any,
+                contact: l.contact || "-",
+                level: l.level || "Pemula",
+                source: l.source || "Website",
+                timestamp: l.timestamp || l.submitted_at || new Date().toISOString(),
+              });
             });
           }
         }
@@ -168,7 +204,7 @@ export default function AdminPage({ initialLeads = [] }: DashboardProps) {
     } finally {
       setIsLoadingLeads(false);
     }
-  }, []);
+  }, [initialLeads]);
 
   useEffect(() => {
     setMounted(true);
