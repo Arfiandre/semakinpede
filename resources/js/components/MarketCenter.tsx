@@ -133,16 +133,28 @@ export default function MarketCenter() {
     setTimeout(() => setSyncFeedback(null), 3500);
   };
 
-  // ATURAN MUTLAK: Hanya mengambil data Medium & High impact dari ForexFactory
+  // ATURAN MUTLAK: Hanya mengambil data Medium & High impact dan batas terbawah per hari ini
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   const filteredNews = newsEvents.filter((ev) => {
     if (ev.impact !== "High" && ev.impact !== "Medium") return false;
+    const eventTime = new Date(ev.dateRaw).getTime();
+    if (!isNaN(eventTime) && eventTime < todayStart.getTime()) return false;
     if (impactFilter !== "ALL" && ev.impact !== impactFilter) return false;
     if (currencyFilter !== "ALL" && ev.country !== currencyFilter) return false;
     return true;
   });
 
-  const countHigh = newsEvents.filter((e) => e.impact === "High").length;
-  const countMedium = newsEvents.filter((e) => e.impact === "Medium").length;
+  const countHigh = newsEvents.filter((e) => {
+    const t = new Date(e.dateRaw).getTime();
+    return e.impact === "High" && (isNaN(t) || t >= todayStart.getTime());
+  }).length;
+
+  const countMedium = newsEvents.filter((e) => {
+    const t = new Date(e.dateRaw).getTime();
+    return e.impact === "Medium" && (isNaN(t) || t >= todayStart.getTime());
+  }).length;
   const activePair = FOREX_PAIR_OPTIONS.find((p) => p.id === selectedSymbol) || FOREX_PAIR_OPTIONS[0];
 
   return (

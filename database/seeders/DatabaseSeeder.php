@@ -121,8 +121,12 @@ class DatabaseSeeder extends Seeder
             if (is_array($rawNews)) {
                 $days = ['Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'];
                 $months = ['Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr', 'May' => 'Mei', 'Jun' => 'Jun', 'Jul' => 'Jul', 'Aug' => 'Agt', 'Sep' => 'Sep', 'Oct' => 'Okt', 'Nov' => 'Nov', 'Dec' => 'Des'];
+                $tzWib = new \DateTimeZone('Asia/Jakarta');
+                $todayStart = new \DateTime('today', $tzWib);
 
-                foreach (array_slice($rawNews, 0, 30) as $index => $item) {
+                EconomicNews::truncate();
+
+                foreach (array_slice($rawNews, 0, 40) as $index => $item) {
                     $id = 'ff-news-'.md5(($item['title'] ?? '').($item['date'] ?? '').$index);
                     $dateObj = null;
                     $timeFormatted = 'Terkini';
@@ -132,6 +136,13 @@ class DatabaseSeeder extends Seeder
                     try {
                         if (! empty($item['date'])) {
                             $dateObj = new \DateTime($item['date']);
+                            $dateObj->setTimezone($tzWib);
+
+                            // Batas terbawah adalah per hari ini (>= awal hari ini 00:00:00 WIB)
+                            if ($dateObj < $todayStart) {
+                                continue;
+                            }
+
                             $timeFormatted = $dateObj->format('H:i').' WIB';
                             $dayEng = $dateObj->format('l');
                             $dayName = $days[$dayEng] ?? $dayEng;

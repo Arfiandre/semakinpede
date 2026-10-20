@@ -62,9 +62,14 @@ export default function ForexFactoryNewsManager() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   const filteredNews = news.filter((ev) => {
-    // ATURAN MUTLAK: Hanya Medium & High
+    // ATURAN MUTLAK: Hanya Medium & High dan batas terbawah per hari ini
     if (ev.impact !== "High" && ev.impact !== "Medium") return false;
+    const eventTime = new Date(ev.dateRaw).getTime();
+    if (!isNaN(eventTime) && eventTime < todayStart.getTime()) return false;
 
     const q = search.toLowerCase();
     const matchSearch =
@@ -76,8 +81,15 @@ export default function ForexFactoryNewsManager() {
     return matchSearch && matchImpact;
   });
 
-  const countHigh = news.filter((e) => e.impact === "High").length;
-  const countMedium = news.filter((e) => e.impact === "Medium").length;
+  const countHigh = news.filter((e) => {
+    const t = new Date(e.dateRaw).getTime();
+    return e.impact === "High" && (isNaN(t) || t >= todayStart.getTime());
+  }).length;
+
+  const countMedium = news.filter((e) => {
+    const t = new Date(e.dateRaw).getTime();
+    return e.impact === "Medium" && (isNaN(t) || t >= todayStart.getTime());
+  }).length;
 
   return (
     <div className="space-y-6">

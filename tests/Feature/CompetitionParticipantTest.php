@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\EconomicNews;
 use App\Models\Event;
 use App\Models\Lead;
 use App\Models\User;
@@ -260,5 +261,31 @@ class CompetitionParticipantTest extends TestCase
         // Collection should be deduplicated to 1 item
         $this->assertCount(1, $data);
         $this->assertEquals('112233', $data[0]['demo_account_number']);
+    }
+
+    public function test_economic_news_has_current_dates_with_bottom_limit_today(): void
+    {
+        $this->seed();
+
+        $news = EconomicNews::all();
+        $this->assertNotEmpty($news);
+
+        $tzWib = new \DateTimeZone('Asia/Jakarta');
+        $todayStart = new \DateTime('today', $tzWib);
+
+        foreach ($news as $item) {
+            $this->assertContains($item->impact, ['High', 'Medium']);
+            $this->assertNotNull($item->date_raw);
+
+            $eventDate = new \DateTime($item->date_raw);
+            $eventDate->setTimezone($tzWib);
+
+            // Batas terbawah adalah per hari ini (>= todayStart)
+            $this->assertGreaterThanOrEqual(
+                $todayStart->getTimestamp(),
+                $eventDate->getTimestamp(),
+                "Event {$item->title} pada {$item->date_raw} lebih lampau dari hari ini."
+            );
+        }
     }
 }
