@@ -199,8 +199,14 @@ export default function EventRegistrationModal({
       return;
     }
 
-    if (!demoAccountNumber.trim()) {
+    const cleanedDemoAcc = demoAccountNumber.replace(/\D/g, "");
+    if (!cleanedDemoAcc) {
       setErrorMessage("Nomor account demo wajib diisi.");
+      return;
+    }
+
+    if (cleanedDemoAcc.length !== 6) {
+      setErrorMessage("Nomor account demo harus terdiri dari tepat 6 digit angka.");
       return;
     }
 
@@ -221,11 +227,11 @@ export default function EventRegistrationModal({
         level: "Verifikasi Akun Event Selesai",
         source: "event_trading_account_submitted",
         timestamp: new Date().toISOString(),
-        notes: `Verifikasi Akun Trading untuk event "${event.title}". Akun Demo: ${demoAccountNumber.trim()}`,
+        notes: `Verifikasi Akun Trading untuk event "${event.title}". Akun Demo: ${cleanedDemoAcc}`,
         eventId: event.id,
         eventTitle: event.title,
         hasAccount: "sudah",
-        demoAccountNumber: demoAccountNumber.trim(),
+        demoAccountNumber: cleanedDemoAcc,
         demoInvestorPassword: demoInvestorPassword.trim(),
         screenshotRealAccount: screenshotRealName,
         screenshotTransfer: screenshotTransferName,
@@ -637,20 +643,38 @@ export default function EventRegistrationModal({
                 )}
               </div>
 
-              {/* Field 3: Nomor account demo */}
+              {/* Field 3: Nomor account demo (wajib 6 digit angka) */}
               <div>
-                <label htmlFor="reg-demo-acc" className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
-                  Nomor Account Demo <span className="text-rose-600">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="reg-demo-acc" className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Nomor Account Demo <span className="text-rose-600">*</span>
+                  </label>
+                  <span
+                    className={`text-[11px] font-mono font-bold ${
+                      demoAccountNumber.length === 6 ? "text-emerald-600" : "text-slate-400"
+                    }`}
+                  >
+                    {demoAccountNumber.length}/6 digit
+                  </span>
+                </div>
                 <input
                   id="reg-demo-acc"
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
                   required
-                  placeholder="Contoh: 88291039"
+                  placeholder="Contoh: 123456"
                   value={demoAccountNumber}
-                  onChange={(e) => setDemoAccountNumber(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-950 text-sm font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  onChange={(e) => {
+                    const onlyDigits = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setDemoAccountNumber(onlyDigits);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-950 text-sm font-mono font-bold tracking-wider focus:ring-2 focus:ring-amber-500 focus:outline-none"
                 />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Nomor account demo kompetisi harus terdiri dari tepat 6 digit angka.
+                </p>
               </div>
 
               {/* Field 4: Investor password demo account */}
