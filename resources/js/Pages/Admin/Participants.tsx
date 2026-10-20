@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, Head } from "@inertiajs/react";
 import {
   ArrowLeft,
@@ -84,23 +84,25 @@ export default function ParticipantsPage({
   }
 
   // Format initial participants from Laravel if provided
-  const formattedInitial: ParticipantItem[] = initialParticipants.map((l) => ({
-    id: l.id || `lead-${Math.random()}`,
-    name: l.name || "-",
-    contactType: (l.contact_type || l.contactType || "wa") as any,
-    contact: l.contact || "-",
-    level: l.level || "Peserta Event",
-    source: l.source || "Event",
-    timestamp: l.submitted_at || l.created_at || l.timestamp || new Date().toISOString(),
-    notes: l.notes || undefined,
-    eventId: l.event_id || l.eventId || undefined,
-    eventTitle: l.event_title || l.eventTitle || undefined,
-    hasAccount: (l.has_account || l.hasAccount || undefined) as any,
-    demoAccountNumber: l.demo_account_number || l.demoAccountNumber || undefined,
-    demoInvestorPassword: l.demo_investor_password || l.demoInvestorPassword || undefined,
-    screenshotRealAccount: l.screenshot_real_account || l.screenshotRealAccount || undefined,
-    screenshotTransfer: l.screenshot_transfer || l.screenshotTransfer || undefined,
-  }));
+  const formattedInitial = useMemo<ParticipantItem[]>(() => {
+    return (initialParticipants || []).map((l) => ({
+      id: l.id || `lead-${Math.random()}`,
+      name: l.name || "-",
+      contactType: (l.contact_type || l.contactType || "wa") as any,
+      contact: l.contact || "-",
+      level: l.level || "Peserta Event",
+      source: l.source || "Event",
+      timestamp: l.submitted_at || l.created_at || l.timestamp || new Date().toISOString(),
+      notes: l.notes || undefined,
+      eventId: l.event_id || l.eventId || undefined,
+      eventTitle: l.event_title || l.eventTitle || undefined,
+      hasAccount: (l.has_account || l.hasAccount || undefined) as any,
+      demoAccountNumber: l.demo_account_number || l.demoAccountNumber || undefined,
+      demoInvestorPassword: l.demo_investor_password || l.demoInvestorPassword || undefined,
+      screenshotRealAccount: l.screenshot_real_account || l.screenshotRealAccount || undefined,
+      screenshotTransfer: l.screenshot_transfer || l.screenshotTransfer || undefined,
+    }));
+  }, [initialParticipants]);
 
   return (
     <div className="min-h-screen bg-slate-100/70">

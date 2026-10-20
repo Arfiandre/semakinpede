@@ -27,7 +27,7 @@ import {
   Image as ImageIcon,
   Calendar,
 } from "lucide-react";
-import { getAllLeadsDB, DBLead } from "@/lib/db";
+import { getAllLeadsDB, deleteLeadDB, DBLead } from "@/lib/db";
 
 export interface ParticipantItem {
   id: string;
@@ -83,9 +83,11 @@ export default function CompetitionParticipantsManager({
     const combinedMap = new Map<string, ParticipantItem>();
 
     // 1. Load from Initial Data prop
-    initialData.forEach((item) => {
-      combinedMap.set(item.id, item);
-    });
+    if (Array.isArray(initialData)) {
+      initialData.forEach((item) => {
+        combinedMap.set(item.id, item);
+      });
+    }
 
     // 2. Fetch from Backend Laravel API
     try {
@@ -176,7 +178,7 @@ export default function CompetitionParticipantsManager({
 
     setParticipants(sorted);
     setIsLoading(false);
-  }, [initialData]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -200,15 +202,47 @@ export default function CompetitionParticipantsManager({
       return;
     }
 
-    // Try deleting from backend
+    // 1. Langsung hapus dari state UI & tutup modal detail jika terbuka
+    setParticipants((prev) => prev.filter((p) => p.id !== id));
+    setDetailItem((current) => (current?.id === id ? null : current));
+
+    // 2. Hapus dari IndexedDB
     try {
-      await fetch(`/api/leads/${id}`, {
-        method: "DELETE",
-        headers: { Accept: "application/json" },
-      });
+      await deleteLeadDB(id);
+    } catch (err) {
+      console.warn("Gagal menghapus lead dari IndexedDB:", err);
+    }
+
+    // 3. Hapus dari localStorage
+    try {
+      const raw = localStorage.getItem("kfi_leads");
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const updated = list.filter((item: any) => item.id !== id);
+          localStorage.setItem("kfi_leads", JSON.stringify(updated));
+        }
+      }
     } catch {}
 
-    setParticipants((prev) => prev.filter((p) => p.id !== id));
+    // 4. Hapus dari backend database dengan CSRF token valid
+    try {
+      if (typeof window !== "undefined" && (window as any).axios) {
+        await (window as any).axios.delete(`/api/leads/${id}`);
+      } else {
+        const csrf = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+        await fetch(`/api/leads/${id}`, {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json",
+            "X-CSRF-TOKEN": csrf,
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("Gagal menghapus lead dari backend:", err);
+    }
   };
 
   // Unique Events for filter

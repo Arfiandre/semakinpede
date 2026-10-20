@@ -114,4 +114,27 @@ class CompetitionParticipantTest extends TestCase
         ]);
         $this->assertAuthenticated();
     }
+
+    public function test_admin_can_delete_lead(): void
+    {
+        $user = User::factory()->create();
+
+        $lead = Lead::create([
+            'id' => 'lead-to-delete-123',
+            'name' => 'Peserta Dihapus',
+            'contact_type' => 'wa',
+            'contact' => '08123456789',
+            'level' => 'Pemula',
+            'source' => 'Website',
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertDatabaseHas('leads', ['id' => 'lead-to-delete-123']);
+
+        $response = $this->actingAs($user)->deleteJson('/api/leads/lead-to-delete-123');
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseMissing('leads', ['id' => 'lead-to-delete-123']);
+    }
 }

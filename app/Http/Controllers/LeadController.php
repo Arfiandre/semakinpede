@@ -88,6 +88,11 @@ class LeadController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $lead = Lead::find($id);
+        if (! $lead) {
+            $altId = str_starts_with($id, 'lead-') ? substr($id, 5) : 'lead-'.$id;
+            $lead = Lead::find($altId);
+        }
+
         if ($lead) {
             $lead->delete();
 

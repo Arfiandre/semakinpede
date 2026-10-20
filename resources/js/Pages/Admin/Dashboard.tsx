@@ -36,6 +36,7 @@ import DatabaseManager from "@/components/admin/DatabaseManager";
 import CompetitionParticipantsManager from "@/components/admin/CompetitionParticipantsManager";
 import AdminLoginForm from "@/components/admin/AdminLoginForm";
 import SecuritySettingsModal from "@/components/admin/SecuritySettingsModal";
+import { deleteLeadDB, clearAllLeadsDB } from "@/lib/db";
 import {
   isSuperadminAuthenticated,
   logoutSuperadmin,
@@ -45,6 +46,7 @@ import {
 } from "@/lib/authStorage";
 
 interface Lead {
+  id?: string;
   name: string;
   contactType: "wa" | "telegram" | "email";
   contact: string;
@@ -53,13 +55,24 @@ interface Lead {
   timestamp: string;
 }
 
+interface DashboardProps {
+  initialLeads?: any[];
+  initialEvents?: any[];
+  initialBrokers?: any[];
+  initialNews?: any[];
+  initialSettings?: any;
+  initialStats?: any;
+  auditLogs?: any[];
+}
+
 const STORAGE_KEY = "kfi_leads";
 
-export default function AdminPage() {
+export default function AdminPage({ initialLeads = [] }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<
     "events" | "brokers" | "news" | "settings" | "leads" | "database" | "participants"
   >("events");
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(false);
   const [search, setSearch] = useState("");
   const [filterSource, setFilterSource] = useState("all");
   const [filterContact, setFilterContact] = useState("all");
@@ -85,14 +98,75 @@ export default function AdminPage() {
     setAuthChecking(false);
   }, []);
 
-  const loadLeads = useCallback(() => {
+  const loadLeads = useCallback(async () => {
+    setIsLoadingLeads(true);
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      if (data) {
-        setLeads(JSON.parse(data));
+      const combinedMap = new Map<string, Lead>();
+
+      // 1. Initial Leads dari database Laravel
+      if (Array.isArray(initialLeads)) {
+        initialLeads.forEach((l: any) => {
+          const key = l.id || `${l.name}-${l.contact}`;
+          combinedMap.set(key, {
+            id: l.id,
+            name: l.name || "-",
+            contactType: (l.contact_type || l.contactType || "wa") as any,
+            contact: l.contact || "-",
+            level: l.level || "Pemula",
+            source: l.source || "Website",
+            timestamp: l.submitted_at || l.created_at || new Date().toISOString(),
+          });
+        });
       }
+
+      // 2. Fetch data realtime dari endpoint /api/leads
+      try {
+        const res = await fetch("/api/leads", {
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const serverData = await res.json();
+          if (Array.isArray(serverData)) {
+            serverData.forEach((l: any) => {
+              const key = l.id || `${l.name}-${l.contact}`;
+              combinedMap.set(key, {
+                id: l.id,
+                name: l.name || "-",
+                contactType: (l.contact_type || l.contactType || "wa") as any,
+                contact: l.contact || "-",
+                level: l.level || "Pemula",
+                source: l.source || "Website",
+                timestamp: l.submitted_at || l.created_at || new Date().toISOString(),
+              });
+            });
+          }
+        }
+      } catch {}
+
+      // 3. Gabungkan dengan localStorage jika ada
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const localList = JSON.parse(raw);
+          if (Array.isArray(localList)) {
+            localList.forEach((l: any) => {
+              const key = l.id || `${l.name}-${l.contact}`;
+              if (!combinedMap.has(key)) {
+                combinedMap.set(key, l);
+              }
+            });
+          }
+        }
+      } catch {}
+
+      const sorted = Array.from(combinedMap.values()).sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      setLeads(sorted);
     } catch {
       console.error("Gagal memuat data lead");
+    } finally {
+      setIsLoadingLeads(false);
     }
   }, []);
 
@@ -113,17 +187,71 @@ export default function AdminPage() {
     };
   }, [checkAuth, loadLeads]);
 
-  const deleteLead = (index: number) => {
-    const newLeads = leads.filter((_, i) => i !== index);
+  const deleteLead = async (leadToDelete: Lead) => {
+    if (!confirm(`Hapus lead "${leadToDelete.name}"? Tindakan ini tidak dapat dibatalkan.`)) {
+      return;
+    }
+
+    const leadId = leadToDelete.id;
+
+    // 1. Langsung hapus dari state UI
+    const newLeads = leads.filter((l) => l !== leadToDelete);
     setLeads(newLeads);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newLeads));
+
+    // 2. Hapus dari IndexedDB & server
+    if (leadId) {
+      try {
+        await deleteLeadDB(leadId);
+      } catch {}
+
+      try {
+        if (typeof window !== "undefined" && (window as any).axios) {
+          await (window as any).axios.delete(`/api/leads/${leadId}`);
+        } else {
+          const csrf = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+          await fetch(`/api/leads/${leadId}`, {
+            method: "DELETE",
+            headers: {
+              Accept: "application/json",
+              "X-CSRF-TOKEN": csrf,
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          });
+        }
+      } catch (err) {
+        console.warn("Gagal hapus lead di server:", err);
+      }
+    }
   };
 
-  const clearAllLeads = () => {
-    if (confirm("Hapus semua lead? Tindakan ini tidak bisa dibatalkan.")) {
-      setLeads([]);
-      localStorage.removeItem(STORAGE_KEY);
+  const clearAllLeads = async () => {
+    if (!confirm("Hapus semua lead? Tindakan ini tidak bisa dibatalkan.")) {
+      return;
     }
+
+    try {
+      if (typeof window !== "undefined" && (window as any).axios) {
+        await (window as any).axios.delete("/api/leads");
+      } else {
+        const csrf = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+        await fetch("/api/leads", {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json",
+            "X-CSRF-TOKEN": csrf,
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+      }
+    } catch {}
+
+    try {
+      await clearAllLeadsDB();
+    } catch {}
+
+    setLeads([]);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const exportJSON = () => {
@@ -329,10 +457,11 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={loadLeads}
-                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-slate-300 hover:text-white"
+                    disabled={isLoadingLeads}
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-slate-300 hover:text-white disabled:opacity-50"
                     title="Refresh Data Leads"
                   >
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className={`w-4 h-4 ${isLoadingLeads ? "animate-spin" : ""}`} />
                   </button>
                   <button
                     type="button"
@@ -629,7 +758,7 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-right">
                             <button
                               type="button"
-                              onClick={() => deleteLead(leads.indexOf(lead))}
+                              onClick={() => deleteLead(lead)}
                               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                               title="Hapus Lead"
                             >
@@ -652,7 +781,7 @@ export default function AdminPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => deleteLead(leads.indexOf(lead))}
+                          onClick={() => deleteLead(lead)}
                           className="p-1 text-slate-400 hover:text-rose-600"
                         >
                           <Trash2 className="w-4 h-4" />
