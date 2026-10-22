@@ -256,8 +256,8 @@ nano .env</code></pre>
             <div class="mt-1 font-mono text-gray-300 space-y-1">
               <div>APP_ENV=production</div>
               <div>APP_DEBUG=false</div>
-              <div class="text-amber-300"># Jika pakai Port Standar 80/443: APP_URL=https://domainanda.com</div>
-              <div class="text-amber-300"># Jika pakai Custom Port 8080:    APP_URL=http://domainanda.com:8080  (atau http://IP_VPS:8080)</div>
+              <div class="text-amber-300"># Jika pakai Port Standar 80/443: APP_URL=https://semakinpede.site</div>
+              <div class="text-amber-300"># Jika pakai Custom Port 8080:    APP_URL=http://semakinpede.site:8080  (atau http://IP_VPS:8080)</div>
               <div>DB_CONNECTION=mysql</div>
               <div>DB_DATABASE=semakinpede</div>
               <div>DB_USERNAME=semakinpede_user</div>
@@ -363,7 +363,7 @@ server {
     listen 8081;
     # listen [::]:8081; # Hapus/nonaktifkan jika muncul error 97 (IPv6 disabled di VPS)
     
-    server_name domainanda.com www.domainanda.com _;
+    server_name semakinpede.site www.semakinpede.site _;
 
     root /var/www/semakinpede/public;
     index index.php index.html;
@@ -421,7 +421,7 @@ server {
     # listen [::]:80; # Nonaktifkan jika IPv6 tidak aktif di VPS (mencegah error 97)
     
     # Bedakan nama domain dengan project lain agar tidak bentrok
-    server_name semakinpede.com www.semakinpede.com;
+    server_name semakinpede.site www.semakinpede.site;
 
     root /var/www/semakinpede/public;
     index index.php index.html;
@@ -486,7 +486,7 @@ sudo nginx -t && sudo systemctl reload nginx</code></pre>
 sudo apt install -y certbot python3-certbot-nginx
 
 # Jalankan installer sertifikat otomatis (sesuaikan nama domain)
-sudo certbot --nginx -d domainanda.com -d www.domainanda.com</code></pre>
+sudo certbot --nginx -d semakinpede.site -d www.semakinpede.site</code></pre>
           </div>
         </div>
       </div>

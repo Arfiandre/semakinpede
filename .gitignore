@@ -28,3 +28,27 @@ Homestead.yaml
 Thumbs.db
 /komunitas-futures
 powershell.cmd
+
+# Local AI agent instructions, skills, and configuration
+/.agents/
+/.ai/
+/.claude/
+/.gemini/
+/.windsurf/
+/.clinerules/
+/.roo/
+AGENTS.md
+AGENTS.override.md
+CLAUDE.md
+CLAUDE.local.md
+GEMINI.md
+/.cursorrules
+/.windsurfrules
+/.mcp.json
+/.mcp-server.json
+/mcp.json
+/boost.json
+/.github/copilot-instructions.md
+/.github/instructions/
+/.github/prompts/
+/.aider*
