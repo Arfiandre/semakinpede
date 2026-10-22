@@ -762,16 +762,16 @@ export default function EventRegistrationModal({
               </div>
 
               {/* Kartu Khusus Link Grup WhatsApp */}
-              <div className="p-5 rounded-xl bg-gradient-to-br from-sky-900 to-slate-900 text-white border border-sky-800/80 shadow-md space-y-3">
+              <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-900 to-slate-900 text-white border border-emerald-800/80 shadow-md space-y-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
                     <MessageCircle className="w-5 h-5" />
                   </div>
                   <div>
                     <h5 className="font-bold text-sm text-white">
                       Grup WhatsApp Peserta Event
                     </h5>
-                    <span className="text-[11px] text-sky-200">
+                    <span className="text-[11px] text-emerald-200">
                       Ruang Koordinasi & Saluran Materi
                     </span>
                   </div>
@@ -786,11 +786,11 @@ export default function EventRegistrationModal({
                     href={whatsappGroupLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-sky-500 hover:bg-sky-400 active:scale-[0.99] text-white font-extrabold text-sm transition-all shadow-md hover:shadow-sky-500/25"
+                    className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-extrabold text-sm transition-all shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                   >
                     <MessageCircle className="w-4 h-4" />
                     <span>Gabung Grup WhatsApp</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-sky-100" />
+                    <ExternalLink className="w-3.5 h-3.5 text-emerald-100" />
                   </a>
                 </div>
               </div>
