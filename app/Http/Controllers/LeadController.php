@@ -8,6 +8,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 class LeadController extends Controller
 {
@@ -25,8 +27,7 @@ class LeadController extends Controller
         foreach ($leads as $lead) {
             $key = null;
             $contact = (string) ($lead->contact ?? '');
-            $digits = preg_replace('/[^0-9]/', '', $contact);
-            $suffix = strlen($digits) >= 8 ? substr($digits, -9) : $contact;
+            $suffix = self::normalizedContact($contact, $lead->contact_type ?? 'wa');
 
             // Prioritize Event + Contact match (so Step 1 and Step 2 of same event always match)
             if (! empty($lead->event_id) && ! empty($suffix)) {
@@ -34,7 +35,7 @@ class LeadController extends Controller
             } elseif (! empty($lead->event_title) && ! empty($suffix)) {
                 $key = "event_title:{$lead->event_title}:{$suffix}";
             } elseif (! empty($lead->demo_account_number) && strlen((string) $lead->demo_account_number) >= 4) {
-                $key = 'demo:'.trim((string) $lead->demo_account_number);
+                $key = 'demo:'.trim((string) $lead->demo_account_number).':'.$suffix;
             } elseif (! empty($suffix) && ! empty($lead->name) && $lead->name !== '-') {
                 $key = "lead:{$suffix}:".strtolower(trim((string) $lead->name));
             } else {
@@ -86,10 +87,11 @@ class LeadController extends Controller
                 : null;
 
             if ($demoAcc) {
-                if (isset($seenDemoAccounts[$demoAcc])) {
+                $accountKey = ($lead->event_id ?? $lead->event_title ?? '').':'.self::normalizedContact($lead->contact, $lead->contact_type).':'.$demoAcc;
+                if (isset($seenDemoAccounts[$accountKey])) {
                     continue; // Skip duplicate demo account
                 }
-                $seenDemoAccounts[$demoAcc] = true;
+                $seenDemoAccounts[$accountKey] = true;
             }
 
             $final[] = $lead;
@@ -100,10 +102,61 @@ class LeadController extends Controller
 
     public function index(): JsonResponse
     {
-        $rawLeads = Lead::orderBy('created_at', 'desc')->get();
+        $rawLeads = self::withEvidenceLinks(Lead::forAdminListing()->orderBy('created_at', 'desc')->get());
         $leads = self::deduplicateCollection($rawLeads);
 
         return response()->json($leads->values());
+    }
+
+    /**
+     * @param  Collection<int, Lead>  $leads
+     * @return Collection<int, Lead>
+     */
+    public static function withEvidenceLinks(Collection $leads): Collection
+    {
+        return $leads->each(function (Lead $lead): void {
+            $lead->screenshot_real_account = $lead->has_real_account_evidence
+                ? (self::existingEvidenceUrl($lead->real_account_evidence_url) ?? route('leads.evidence', ['id' => $lead->id, 'type' => 'real-account'], false))
+                : null;
+            $lead->screenshot_transfer = $lead->has_transfer_evidence
+                ? (self::existingEvidenceUrl($lead->transfer_evidence_url) ?? route('leads.evidence', ['id' => $lead->id, 'type' => 'transfer'], false))
+                : null;
+            unset($lead->has_real_account_evidence, $lead->has_transfer_evidence, $lead->real_account_evidence_url, $lead->transfer_evidence_url);
+        });
+    }
+
+    private static function existingEvidenceUrl(?string $value): ?string
+    {
+        if ($value && (
+            preg_match('~^/(?:storage/|api/leads/)[^\s]*$~', $value) ||
+            (filter_var($value, FILTER_VALIDATE_URL) && in_array(parse_url($value, PHP_URL_SCHEME), ['http', 'https'], true))
+        )) {
+            return $value;
+        }
+
+        return null;
+    }
+
+    public function evidence(string $id, string $type): Response
+    {
+        $column = match ($type) {
+            'real-account' => 'screenshot_real_account',
+            'transfer' => 'screenshot_transfer',
+            default => abort(404),
+        };
+        $value = Lead::findOrFail($id, ['id', $column])->getAttribute($column);
+
+        abort_unless(is_string($value) && preg_match('/^data:image\/(png|jpe?g|webp|gif);base64,(.+)$/s', $value, $matches), 404);
+        $content = base64_decode($matches[2], true);
+        abort_if($content === false, 404);
+        $image = @getimagesizefromstring($content);
+        abort_unless($image !== false && in_array($image['mime'], ['image/png', 'image/jpeg', 'image/webp', 'image/gif'], true), 404);
+
+        return response($content, 200, [
+            'Content-Type' => $image['mime'],
+            'Content-Disposition' => 'inline',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -135,7 +188,7 @@ class LeadController extends Controller
 
         $providedId = $request->filled('id') ? strip_tags(trim($request->input('id'))) : null;
         $name = strip_tags(trim($validated['name']));
-        $contactType = $request->input('contactType') ?? $request->input('contact_type', 'wa');
+        $contactType = $request->input('contactType') ?? $request->input('contact_type') ?? 'wa';
         $contact = strip_tags(trim($validated['contact']));
         $eventId = $request->input('eventId') ?? $request->input('event_id');
         $eventTitle = $request->filled('eventTitle') || $request->filled('event_title')
@@ -153,6 +206,7 @@ class LeadController extends Controller
         $level = $request->filled('level') ? strip_tags(trim($request->input('level'))) : 'Pemula';
         $source = $request->filled('source') ? strip_tags(trim($request->input('source'))) : 'Website';
         $notes = $request->filled('notes') ? strip_tags(trim($request->input('notes'))) : null;
+        $ownedLeadIds = $request->session()->get('submitted_lead_ids', []);
 
         // Check for existing lead to prevent duplicate records
         $existingLead = null;
@@ -164,28 +218,35 @@ class LeadController extends Controller
                 $altId = str_starts_with($providedId, 'lead-') ? substr($providedId, 5) : 'lead-'.$providedId;
                 $existingLead = Lead::find($altId);
             }
+
+            if ($existingLead && (
+                (! $request->user() && ! in_array($existingLead->id, $ownedLeadIds, true)) ||
+                self::normalizedContact($existingLead->contact, $existingLead->contact_type) !== self::normalizedContact($contact, $contactType) ||
+                (! empty($existingLead->event_id) && $existingLead->event_id !== $eventId)
+            )) {
+                throw ValidationException::withMessages(['id' => 'Pendaftaran tidak cocok dengan kontak atau agenda ini.']);
+            }
         }
 
         // 2. Check by demo account number (if submitted and >= 4 digits)
         if (! $existingLead && ! empty($demoAcc) && strlen($demoAcc) >= 4) {
-            $existingLead = Lead::where('demo_account_number', $demoAcc)->first();
+            $existingLead = Lead::where('demo_account_number', $demoAcc)
+                ->where('contact', $contact)
+                ->where('event_id', $eventId)
+                ->first();
         }
 
         // 3. Check by Event + Contact (with phone normalization)
         $cleanDigits = preg_replace('/[^0-9]/', '', $contact);
         if (! $existingLead && ! empty($eventId)) {
-            $query = Lead::where(function ($q) use ($eventId, $eventTitle) {
-                $q->where('event_id', $eventId);
-                if (! empty($eventTitle)) {
-                    $q->orWhere('event_title', $eventTitle);
-                }
-            });
+            $query = Lead::where('event_id', $eventId);
 
             $existingLead = (clone $query)->where('contact', $contact)->first();
 
             if (! $existingLead && strlen($cleanDigits) >= 8) {
                 $suffix = substr($cleanDigits, -9);
-                $existingLead = (clone $query)->where('contact', 'like', "%{$suffix}%")->first();
+                $existingLead = (clone $query)->where('contact', 'like', "%{$suffix}%")->get()
+                    ->first(fn (Lead $lead): bool => self::normalizedContact($lead->contact, $lead->contact_type) === self::normalizedContact($contact, $contactType));
             }
         }
 
@@ -193,11 +254,17 @@ class LeadController extends Controller
         if (! $existingLead && ! empty($contact)) {
             $recentLead = Lead::where('contact', $contact)
                 ->where('source', $source)
+                ->where('event_id', $eventId)
+                ->where('event_title', $eventTitle)
                 ->where('created_at', '>=', now()->subMinutes(10))
                 ->first();
             if ($recentLead) {
                 $existingLead = $recentLead;
             }
+        }
+
+        if ($existingLead && ! $request->user() && ! in_array($existingLead->id, $ownedLeadIds, true)) {
+            $existingLead = null;
         }
 
         // If an existing lead is found, update it instead of creating a duplicate
@@ -260,7 +327,7 @@ class LeadController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Pendaftaran / Lead berhasil diperbarui.',
-                'lead' => $existingLead->fresh(),
+                'lead' => ['id' => $existingLead->id],
             ], 200);
         }
 
@@ -285,6 +352,8 @@ class LeadController extends Controller
             'screenshot_transfer' => $screenshotTransfer,
         ]);
 
+        $request->session()->put('submitted_lead_ids', array_slice(array_unique([...$ownedLeadIds, $lead->id]), -100));
+
         AuditLog::create([
             'id' => 'audit-'.Str::uuid(),
             'action' => 'lead_captured',
@@ -296,7 +365,7 @@ class LeadController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pendaftaran / Lead berhasil disimpan ke database.',
-            'lead' => $lead,
+            'lead' => ['id' => $lead->id],
         ], 201);
     }
 
@@ -309,19 +378,7 @@ class LeadController extends Controller
         }
 
         if ($lead) {
-            $contact = $lead->contact;
-            $eventId = $lead->event_id;
-            $demoAcc = $lead->demo_account_number;
-
             $lead->delete();
-
-            // Also clean up any historical duplicate entries for this participant
-            if (! empty($demoAcc) && strlen((string) $demoAcc) >= 4) {
-                Lead::where('demo_account_number', $demoAcc)->delete();
-            }
-            if (! empty($eventId) && ! empty($contact)) {
-                Lead::where('event_id', $eventId)->where('contact', $contact)->delete();
-            }
 
             return response()->json(['success' => true]);
         }
@@ -338,7 +395,7 @@ class LeadController extends Controller
 
     public function participants(): JsonResponse
     {
-        $rawParticipants = Lead::whereNotNull('event_id')
+        $rawParticipants = Lead::forAdminListing()->whereNotNull('event_id')
             ->orWhereNotNull('event_title')
             ->orWhereNotNull('demo_account_number')
             ->orWhereNotNull('has_account')
@@ -346,8 +403,19 @@ class LeadController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $participants = self::deduplicateCollection($rawParticipants);
+        $participants = self::deduplicateCollection(self::withEvidenceLinks($rawParticipants));
 
         return response()->json($participants->values());
+    }
+
+    private static function normalizedContact(string $contact, string $contactType): string
+    {
+        if ($contactType !== 'wa') {
+            return strtolower(trim($contact));
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', $contact);
+
+        return str_starts_with($digits, '0') ? '62'.substr($digits, 1) : $digits;
     }
 }

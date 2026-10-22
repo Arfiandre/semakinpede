@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Users,
   TrendingUp,
@@ -36,7 +36,7 @@ import DatabaseManager from "@/components/admin/DatabaseManager";
 import CompetitionParticipantsManager from "@/components/admin/CompetitionParticipantsManager";
 import AdminLoginForm from "@/components/admin/AdminLoginForm";
 import SecuritySettingsModal from "@/components/admin/SecuritySettingsModal";
-import { deleteLeadDB, clearAllLeadsDB } from "@/lib/db";
+import { deleteLeadDB, clearAllLeadsDB, deleteServerLeads, loadAuthoritativeLeads, normalizeDBLead, type DBLead } from "@/lib/db";
 import {
   isSuperadminAuthenticated,
   logoutSuperadmin,
@@ -45,15 +45,7 @@ import {
   AUTH_EVENT_NAME,
 } from "@/lib/authStorage";
 
-interface Lead {
-  id?: string;
-  name: string;
-  contactType: "wa" | "telegram" | "email";
-  contact: string;
-  level: string;
-  source: string;
-  timestamp: string;
-}
+type Lead = DBLead;
 
 interface DashboardProps {
   initialLeads?: any[];
@@ -68,7 +60,7 @@ interface DashboardProps {
 const STORAGE_KEY = "kfi_leads";
 
 export default function AdminPage({
-  initialLeads = [],
+  initialLeads,
   initialEvents = [],
 }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<
@@ -76,6 +68,8 @@ export default function AdminPage({
   >("events");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+  const latestLeads = useRef<Lead[] | null>(null);
+  const loadVersion = useRef(0);
   const [search, setSearch] = useState("");
   const [filterSource, setFilterSource] = useState("all");
   const [filterContact, setFilterContact] = useState("all");
@@ -102,110 +96,27 @@ export default function AdminPage({
   }, []);
 
   const loadLeads = useCallback(async () => {
+    const version = ++loadVersion.current;
     setIsLoadingLeads(true);
     try {
-      const combinedMap = new Map<string, Lead>();
-
-      const getLeadKey = (item: any): string => {
-        const contact = (item.contact || "").trim();
-        const digits = contact.replace(/[^0-9]/g, "");
-        const suffix = digits.length >= 8 ? digits.slice(-9) : contact;
-        const name = (item.name || "").trim().toLowerCase();
-        if (suffix && name && name !== "-") {
-          return `contact:${suffix}:${name}`;
+      const loaded = await loadAuthoritativeLeads("/api/leads", async () => {
+        if (latestLeads.current !== null) return latestLeads.current;
+        if (Array.isArray(initialLeads)) return initialLeads.map(normalizeDBLead);
+        try {
+          const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+          return Array.isArray(cached) ? cached.map(normalizeDBLead) : [];
+        } catch {
+          return [];
         }
-        if (suffix) {
-          return `phone:${suffix}`;
-        }
-        return `id:${item.id || Math.random()}`;
-      };
-
-      const upsertLead = (leadObj: Lead) => {
-        const key = getLeadKey(leadObj);
-        if (!combinedMap.has(key)) {
-          combinedMap.set(key, leadObj);
-        } else {
-          const existing = combinedMap.get(key)!;
-          // Prefer existing server ID or non-hyphen name
-          combinedMap.set(key, {
-            ...leadObj,
-            ...existing,
-            name: existing.name !== "-" ? existing.name : leadObj.name,
-            timestamp:
-              new Date(leadObj.timestamp).getTime() > new Date(existing.timestamp).getTime()
-                ? leadObj.timestamp
-                : existing.timestamp,
-          });
-        }
-      };
-
-      // 1. Initial Leads dari database Laravel
-      if (Array.isArray(initialLeads)) {
-        initialLeads.forEach((l: any) => {
-          upsertLead({
-            id: l.id,
-            name: l.name || "-",
-            contactType: (l.contact_type || l.contactType || "wa") as any,
-            contact: l.contact || "-",
-            level: l.level || "Pemula",
-            source: l.source || "Website",
-            timestamp: l.submitted_at || l.created_at || new Date().toISOString(),
-          });
-        });
-      }
-
-      // 2. Fetch data realtime dari endpoint /api/leads
-      try {
-        const res = await fetch("/api/leads", {
-          headers: { Accept: "application/json" },
-        });
-        if (res.ok) {
-          const serverData = await res.json();
-          if (Array.isArray(serverData)) {
-            serverData.forEach((l: any) => {
-              upsertLead({
-                id: l.id,
-                name: l.name || "-",
-                contactType: (l.contact_type || l.contactType || "wa") as any,
-                contact: l.contact || "-",
-                level: l.level || "Pemula",
-                source: l.source || "Website",
-                timestamp: l.submitted_at || l.created_at || new Date().toISOString(),
-              });
-            });
-          }
-        }
-      } catch {}
-
-      // 3. Gabungkan dengan localStorage jika ada
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const localList = JSON.parse(raw);
-          if (Array.isArray(localList)) {
-            localList.forEach((l: any) => {
-              upsertLead({
-                id: l.id,
-                name: l.name || "-",
-                contactType: (l.contact_type || l.contactType || "wa") as any,
-                contact: l.contact || "-",
-                level: l.level || "Pemula",
-                source: l.source || "Website",
-                timestamp: l.timestamp || l.submitted_at || new Date().toISOString(),
-              });
-            });
-          }
-        }
-      } catch {}
-
-      const sorted = Array.from(combinedMap.values()).sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      setLeads(sorted);
+      });
+      if (version !== loadVersion.current) return;
+      const displayLeads = loaded.map(({ demoInvestorPassword, screenshotRealAccount, screenshotTransfer, ...lead }) => lead);
+      latestLeads.current = displayLeads;
+      setLeads(displayLeads);
     } catch {
       console.error("Gagal memuat data lead");
     } finally {
-      setIsLoadingLeads(false);
+      if (version === loadVersion.current) setIsLoadingLeads(false);
     }
   }, [initialLeads]);
 
@@ -230,67 +141,46 @@ export default function AdminPage({
     if (!confirm(`Hapus lead "${leadToDelete.name}"? Tindakan ini tidak dapat dibatalkan.`)) {
       return;
     }
-
     const leadId = leadToDelete.id;
+    if (!leadId) return;
 
-    // 1. Langsung hapus dari state UI
-    const newLeads = leads.filter((l) => l !== leadToDelete);
-    setLeads(newLeads);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newLeads));
-
-    // 2. Hapus dari IndexedDB & server
-    if (leadId) {
-      try {
-        await deleteLeadDB(leadId);
-      } catch {}
-
-      try {
-        if (typeof window !== "undefined" && (window as any).axios) {
-          await (window as any).axios.delete(`/api/leads/${leadId}`);
-        } else {
-          const csrf = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
-          await fetch(`/api/leads/${leadId}`, {
-            method: "DELETE",
-            headers: {
-              Accept: "application/json",
-              "X-CSRF-TOKEN": csrf,
-              "X-Requested-With": "XMLHttpRequest",
-            },
-          });
-        }
-      } catch (err) {
-        console.warn("Gagal hapus lead di server:", err);
-      }
+    try {
+      await deleteServerLeads(leadId);
+    } catch {
+      alert("Data belum terhapus di server. Periksa koneksi lalu coba kembali.");
+      return;
     }
+
+    loadVersion.current++;
+    setIsLoadingLeads(false);
+    const newLeads = (latestLeads.current || leads).filter((lead) => lead.id !== leadId);
+    latestLeads.current = newLeads;
+    setLeads(newLeads);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newLeads));
+    } catch {}
+    await deleteLeadDB(leadId);
   };
 
   const clearAllLeads = async () => {
     if (!confirm("Hapus semua lead? Tindakan ini tidak bisa dibatalkan.")) {
       return;
     }
-
     try {
-      if (typeof window !== "undefined" && (window as any).axios) {
-        await (window as any).axios.delete("/api/leads");
-      } else {
-        const csrf = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
-        await fetch("/api/leads", {
-          method: "DELETE",
-          headers: {
-            Accept: "application/json",
-            "X-CSRF-TOKEN": csrf,
-            "X-Requested-With": "XMLHttpRequest",
-          },
-        });
-      }
-    } catch {}
+      await deleteServerLeads();
+    } catch {
+      alert("Data belum terhapus di server. Periksa koneksi lalu coba kembali.");
+      return;
+    }
 
-    try {
-      await clearAllLeadsDB();
-    } catch {}
-
+    loadVersion.current++;
+    setIsLoadingLeads(false);
+    latestLeads.current = [];
     setLeads([]);
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    await clearAllLeadsDB();
   };
 
   const exportJSON = () => {

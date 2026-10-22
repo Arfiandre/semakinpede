@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Trophy,
   Users,
@@ -27,7 +27,7 @@ import {
   Image as ImageIcon,
   Calendar,
 } from "lucide-react";
-import { getAllLeadsDB, deleteLeadDB, DBLead } from "@/lib/db";
+import { getAllLeadsDB, deleteLeadDB, deleteServerLeads, loadAuthoritativeLeads, normalizeDBLead } from "@/lib/db";
 
 export interface ParticipantItem {
   id: string;
@@ -52,10 +52,12 @@ interface CompetitionParticipantsManagerProps {
 }
 
 export default function CompetitionParticipantsManager({
-  initialData = [],
+  initialData,
 }: CompetitionParticipantsManagerProps) {
-  const [participants, setParticipants] = useState<ParticipantItem[]>(initialData);
+  const [participants, setParticipants] = useState<ParticipantItem[]>(initialData || []);
   const [isLoading, setIsLoading] = useState(false);
+  const latestParticipants = useRef<ParticipantItem[] | null>(null);
+  const loadVersion = useRef(0);
   const [search, setSearch] = useState("");
   const [filterAccount, setFilterAccount] = useState<"all" | "sudah" | "belum">("all");
   const [filterStatus, setFilterStatus] = useState<"all" | "complete" | "initial">("all");
@@ -117,147 +119,25 @@ export default function CompetitionParticipantsManager({
 
   // Load participants from Server & IndexedDB
   const loadData = useCallback(async () => {
+    const version = ++loadVersion.current;
     setIsLoading(true);
-    const combinedMap = new Map<string, ParticipantItem>();
-
-    const upsertParticipant = (item: ParticipantItem) => {
-      let key = `id:${item.id}`;
-      const digits = (item.contact || "").replace(/[^0-9]/g, "");
-      const suffix = digits.length >= 8 ? digits.slice(-9) : (item.contact || "");
-
-      if (item.eventId && suffix) {
-        key = `event:${item.eventId}:${suffix}`;
-      } else if (item.eventTitle && suffix) {
-        key = `event_title:${item.eventTitle}:${suffix}`;
-      } else if (item.demoAccountNumber && item.demoAccountNumber.trim().length >= 4) {
-        key = `demo:${item.demoAccountNumber.trim()}`;
-      } else if (suffix && item.name && item.name !== "-") {
-        key = `part:${suffix}:${item.name.toLowerCase().trim()}`;
-      }
-
-      if (!combinedMap.has(key)) {
-        combinedMap.set(key, item);
-      } else {
-        const existing = combinedMap.get(key)!;
-        const preferNew =
-          (!existing.demoAccountNumber && Boolean(item.demoAccountNumber)) ||
-          (!existing.screenshotRealAccount && Boolean(item.screenshotRealAccount)) ||
-          (existing.name === "-" && item.name !== "-");
-
-        if (preferNew) {
-          combinedMap.set(key, {
-            ...existing,
-            ...item,
-            id: existing.id && !existing.id.startsWith("lead-") ? existing.id : item.id,
-            notes: item.notes || existing.notes,
-          });
-        } else {
-          combinedMap.set(key, {
-            ...item,
-            ...existing,
-            demoAccountNumber: existing.demoAccountNumber || item.demoAccountNumber,
-            demoInvestorPassword: existing.demoInvestorPassword || item.demoInvestorPassword,
-            screenshotRealAccount: existing.screenshotRealAccount || item.screenshotRealAccount,
-            screenshotTransfer: existing.screenshotTransfer || item.screenshotTransfer,
-          });
-        }
-      }
-    };
-
-    // 1. Load from Initial Data prop
-    if (Array.isArray(initialData)) {
-      initialData.forEach(upsertParticipant);
-    }
-
-    // 2. Fetch from Backend Laravel API
     try {
-      const res = await fetch("/api/participants", {
-        headers: { Accept: "application/json" },
+      const loaded = await loadAuthoritativeLeads("/api/participants", async () => {
+        if (latestParticipants.current !== null) return latestParticipants.current;
+        if (Array.isArray(initialData)) return initialData.map(normalizeDBLead);
+        const cached = await getAllLeadsDB();
+        return cached.filter((lead) =>
+          Boolean(lead.eventId || lead.eventTitle || lead.demoAccountNumber || lead.hasAccount)
+          || lead.source.toLowerCase().includes("event")
+        );
       });
-      if (res.ok) {
-        const serverLeads = await res.json();
-        if (Array.isArray(serverLeads)) {
-          serverLeads.forEach((l: any) => {
-            const mapped: ParticipantItem = {
-              id: l.id || `lead-${Math.random()}`,
-              name: l.name || "-",
-              contactType: (l.contact_type || l.contactType || "wa") as any,
-              contact: l.contact || "-",
-              level: l.level || "Peserta Event",
-              source: l.source || "Event",
-              timestamp: l.submitted_at || l.created_at || l.timestamp || new Date().toISOString(),
-              notes: l.notes || undefined,
-              eventId: l.event_id || l.eventId || undefined,
-              eventTitle: l.event_title || l.eventTitle || undefined,
-              hasAccount: (l.has_account || l.hasAccount || undefined) as any,
-              demoAccountNumber: l.demo_account_number || l.demoAccountNumber || undefined,
-              demoInvestorPassword: l.demo_investor_password || l.demoInvestorPassword || undefined,
-              screenshotRealAccount: l.screenshot_real_account || l.screenshotRealAccount || undefined,
-              screenshotTransfer: l.screenshot_transfer || l.screenshotTransfer || undefined,
-            };
-
-            const isEventParticipant =
-              Boolean(mapped.eventId) ||
-              Boolean(mapped.eventTitle) ||
-              Boolean(mapped.demoAccountNumber) ||
-              Boolean(mapped.hasAccount) ||
-              mapped.source.toLowerCase().includes("event");
-
-            if (isEventParticipant) {
-              upsertParticipant(mapped);
-            }
-          });
-        }
-      }
-    } catch {
-      // Backend may be offline or local
+      if (version !== loadVersion.current) return;
+      latestParticipants.current = loaded;
+      setParticipants(loaded);
+    } finally {
+      if (version === loadVersion.current) setIsLoading(false);
     }
-
-    // 3. Fetch from Client-side IndexedDB
-    try {
-      const dbLeads = await getAllLeadsDB();
-      if (Array.isArray(dbLeads)) {
-        dbLeads.forEach((l: DBLead) => {
-          const isEventParticipant =
-            Boolean(l.eventId) ||
-            Boolean(l.eventTitle) ||
-            Boolean(l.demoAccountNumber) ||
-            Boolean(l.hasAccount) ||
-            l.source.toLowerCase().includes("event");
-
-          if (isEventParticipant) {
-            upsertParticipant({
-              id: l.id,
-              name: l.name,
-              contactType: l.contactType,
-              contact: l.contact,
-              level: l.level,
-              source: l.source,
-              timestamp: l.timestamp,
-              notes: l.notes,
-              eventId: l.eventId,
-              eventTitle: l.eventTitle,
-              hasAccount: l.hasAccount,
-              demoAccountNumber: l.demoAccountNumber,
-              demoInvestorPassword: l.demoInvestorPassword,
-              screenshotRealAccount: l.screenshotRealAccount,
-              screenshotTransfer: l.screenshotTransfer,
-            });
-          }
-        });
-      }
-    } catch {
-      // IndexedDB unavailable
-    }
-
-    // Convert map to sorted array by timestamp desc
-    const sorted = Array.from(combinedMap.values()).sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-
-    setParticipants(sorted);
-    setIsLoading(false);
-  }, []);
+  }, [initialData]);
 
   useEffect(() => {
     loadData();
@@ -280,48 +160,26 @@ export default function CompetitionParticipantsManager({
     if (!confirm("Hapus data partisipan ini? Tindakan ini tidak dapat dibatalkan.")) {
       return;
     }
-
-    // 1. Langsung hapus dari state UI & tutup modal detail jika terbuka
-    setParticipants((prev) => prev.filter((p) => p.id !== id));
-    setDetailItem((current) => (current?.id === id ? null : current));
-
-    // 2. Hapus dari IndexedDB
     try {
-      await deleteLeadDB(id);
-    } catch (err) {
-      console.warn("Gagal menghapus lead dari IndexedDB:", err);
+      await deleteServerLeads(id);
+    } catch {
+      alert("Data belum terhapus di server. Periksa koneksi lalu coba kembali.");
+      return;
     }
 
-    // 3. Hapus dari localStorage
+    loadVersion.current++;
+    setIsLoading(false);
+    latestParticipants.current = (latestParticipants.current || participants).filter((participant) => participant.id !== id);
+    setParticipants(latestParticipants.current);
+    setDetailItem((current) => (current?.id === id ? null : current));
+    await deleteLeadDB(id);
+
     try {
-      const raw = localStorage.getItem("kfi_leads");
-      if (raw) {
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          const updated = list.filter((item: any) => item.id !== id);
-          localStorage.setItem("kfi_leads", JSON.stringify(updated));
-        }
+      const cached = JSON.parse(localStorage.getItem("kfi_leads") || "[]");
+      if (Array.isArray(cached)) {
+        localStorage.setItem("kfi_leads", JSON.stringify(cached.filter((item: any) => item.id !== id)));
       }
     } catch {}
-
-    // 4. Hapus dari backend database dengan CSRF token valid
-    try {
-      if (typeof window !== "undefined" && (window as any).axios) {
-        await (window as any).axios.delete(`/api/leads/${id}`);
-      } else {
-        const csrf = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
-        await fetch(`/api/leads/${id}`, {
-          method: "DELETE",
-          headers: {
-            Accept: "application/json",
-            "X-CSRF-TOKEN": csrf,
-            "X-Requested-With": "XMLHttpRequest",
-          },
-        });
-      }
-    } catch (err) {
-      console.warn("Gagal menghapus lead dari backend:", err);
-    }
   };
 
   // Unique Events for filter

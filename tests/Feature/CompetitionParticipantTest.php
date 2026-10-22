@@ -120,16 +120,19 @@ class CompetitionParticipantTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->getJson('/api/participants')
             ->assertOk()
-            ->assertJsonFragment(['screenshot_real_account' => $image, 'screenshot_transfer' => $image]);
+            ->assertJsonFragment([
+                'screenshot_real_account' => '/api/leads/upload-size-test/evidence/real-account',
+                'screenshot_transfer' => '/api/leads/upload-size-test/evidence/transfer',
+            ]);
     }
 
-    public function test_arfiandre_can_login_with_matematika_password(): void
+    public function test_admin_can_login_with_their_current_password(): void
     {
-        $this->seed();
+        User::factory()->create(['username' => 'account-owner', 'password' => 'CurrentPassword47!']);
 
         $response = $this->postJson('/admin/login', [
-            'username' => 'Arfiandre',
-            'password' => 'matematika',
+            'username' => 'account-owner',
+            'password' => 'CurrentPassword47!',
             'remember' => true,
         ]);
 

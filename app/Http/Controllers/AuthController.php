@@ -41,29 +41,6 @@ class AuthController extends Controller
 
         if ($user && Hash::check($credentials['password'], $user->password)) {
             Auth::login($user, $remember);
-        } else {
-            // Sinkronisasi & pemulihan otomatis kredensial bawaan superadmin
-            if (
-                in_array(strtolower($credentials['username']), ['superadmin', 'admin@semakinpede.com']) &&
-                in_array($credentials['password'], ['SemakinPede2026!', 'Admin123!'])
-            ) {
-                $defaultUser = User::firstOrNew(['username' => 'superadmin']);
-                $defaultUser->name = 'Superadmin Semakin Pede';
-                $defaultUser->email = 'admin@semakinpede.com';
-                $defaultUser->password = Hash::make($credentials['password']);
-                $defaultUser->save();
-                Auth::login($defaultUser, $remember);
-            } elseif (
-                in_array(strtolower($credentials['username']), ['arfiandre', 'arfiandre@semakinpede.com']) &&
-                $credentials['password'] === 'matematika'
-            ) {
-                $arfiandreUser = User::firstOrNew(['username' => 'Arfiandre']);
-                $arfiandreUser->name = 'Arfiandre';
-                $arfiandreUser->email = 'arfiandre@semakinpede.com';
-                $arfiandreUser->password = Hash::make($credentials['password']);
-                $arfiandreUser->save();
-                Auth::login($arfiandreUser, $remember);
-            }
         }
 
         if (Auth::check()) {

@@ -9,11 +9,6 @@ export const AUTH_SESSION_KEY = "kfi_superadmin_session";
 export const AUTH_EVENT_NAME = "kfi_superadmin_auth_event";
 
 export const DEFAULT_USERNAME = "superadmin";
-export const DEFAULT_PASSWORD_PLAIN = "SemakinPede2026!";
-export const DEFAULT_SALT = "kfi_semakinpede_salt_2026";
-export const DEFAULT_PASSWORD_HASH =
-  "bf104ba1b7e6cb0d0ca14a1489bdf40f81e096025ecff50eeaa6f8c29fccf375";
-
 export const MAX_FAILED_ATTEMPTS = 5;
 export const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 menit
 export const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 jam untuk tab aktif
@@ -21,40 +16,13 @@ export const REMEMBER_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 hari jika d
 
 export const DEFAULT_SECURITY_SETTINGS: AdminSecuritySettings = {
   username: DEFAULT_USERNAME,
-  passwordHash: DEFAULT_PASSWORD_HASH,
-  salt: DEFAULT_SALT,
+  passwordHash: "",
+  salt: "",
   updatedAt: "2026-10-12T12:00:00.000Z",
   failedAttempts: 0,
   lockedUntil: null,
   lastLoginAt: null,
 };
-
-export async function hashPassword(
-  password: string,
-  salt: string = DEFAULT_SALT
-): Promise<string> {
-  if (typeof window !== "undefined" && window.crypto && window.crypto.subtle) {
-    try {
-      const enc = new TextEncoder();
-      const data = enc.encode(`${salt}:${password}`);
-      const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-    } catch {
-      // Fallback below
-    }
-  }
-
-  // Fallback string hashing
-  let hash = 0;
-  const str = `${salt}:${password}`;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
-  }
-  return `hash_${Math.abs(hash).toString(16)}`;
-}
 
 export function getSecuritySettings(): AdminSecuritySettings {
   if (typeof window === "undefined") {
@@ -73,6 +41,9 @@ export function getSecuritySettings(): AdminSecuritySettings {
     return {
       ...DEFAULT_SECURITY_SETTINGS,
       ...parsed,
+      passwordHash: "",
+      salt: "",
+      username: getActiveSession()?.username || parsed.username || DEFAULT_USERNAME,
     };
   } catch (err) {
     console.error("Gagal membaca kredensial security:", err);
@@ -83,7 +54,7 @@ export function getSecuritySettings(): AdminSecuritySettings {
 export function saveSecuritySettings(settings: AdminSecuritySettings): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(AUTH_SECURITY_KEY, JSON.stringify(settings));
+    localStorage.setItem(AUTH_SECURITY_KEY, JSON.stringify({ ...settings, passwordHash: "", salt: "" }));
   } catch (err) {
     console.error("Gagal menyimpan kredensial security:", err);
   }
@@ -178,74 +149,59 @@ export function createAdminSession(
   return newSession;
 }
 
+async function postAdminRequest(path: string, data: Record<string, unknown>): Promise<any> {
+  if (typeof window === "undefined") {
+    throw new Error("Lingkungan tidak didukung.");
+  }
+  if ((window as any).axios) {
+    return (await (window as any).axios.post(path, data)).data;
+  }
+
+  const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+  const response = await fetch(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
+    },
+    body: JSON.stringify(data),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    const error = new Error(result.message || "Permintaan ditolak server.") as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+  return result;
+}
+
 export async function authenticateSuperadmin(
   usernameInput: string,
   passwordInput: string,
   rememberMe: boolean
 ): Promise<LoginResult> {
-  if (typeof window === "undefined") {
-    return { success: false, error: "Lingkungan tidak didukung." };
-  }
-
-  const settings = getSecuritySettings();
-  const now = Date.now();
-
-  // 1. Cek lockout brute force
-  if (settings.lockedUntil && now < settings.lockedUntil) {
-    const remainingSeconds = Math.ceil((settings.lockedUntil - now) / 1000);
-    return {
-      success: false,
-      error: `Akses terkunci sementara karena beberapa kali percobaan gagal. Silakan tunggu ${remainingSeconds} detik lagi.`,
-      lockedUntil: settings.lockedUntil,
-    };
-  }
-
-  // 2. Cek username
-  const trimmedUsername = usernameInput.trim();
-  const isArfiandre =
-    trimmedUsername.toLowerCase() === "arfiandre" && passwordInput === "matematika";
-  const isUsernameMatch =
-    trimmedUsername.toLowerCase() === settings.username.toLowerCase();
-
-  // 3. Cek password hash
-  const computedHash = await hashPassword(passwordInput, settings.salt);
-  const isDefaultPlainMatch =
-    settings.passwordHash === DEFAULT_PASSWORD_HASH &&
-    (passwordInput === DEFAULT_PASSWORD_PLAIN || passwordInput === "Admin123!");
-  const isPasswordMatch =
-    computedHash === settings.passwordHash || isDefaultPlainMatch;
-
-  if (!isArfiandre && (!isUsernameMatch || !isPasswordMatch)) {
-    const newFailedCount = (settings.failedAttempts || 0) + 1;
-    let lockedUntil: number | null = null;
-    let errorMsg = "Kombinasi nama pengguna atau kata sandi tidak cocok.";
-
-    if (newFailedCount >= MAX_FAILED_ATTEMPTS) {
-      lockedUntil = now + LOCKOUT_DURATION_MS;
-      errorMsg =
-        "Terlalu banyak percobaan masuk yang salah. Akses portal superadmin dikunci selama 5 menit untuk alasan keamanan.";
+  try {
+    const response = await postAdminRequest("/admin/login", {
+      username: usernameInput.trim(),
+      password: passwordInput,
+      remember: rememberMe,
+    });
+    if (!response.success) {
+      return { success: false, error: response.message || "Login ditolak server." };
     }
-
-    const updatedSettings: AdminSecuritySettings = {
-      ...settings,
-      failedAttempts: newFailedCount >= MAX_FAILED_ATTEMPTS ? 0 : newFailedCount,
-      lockedUntil,
-    };
-    saveSecuritySettings(updatedSettings);
-
+    createAdminSession(response.user?.username || usernameInput.trim(), rememberMe);
+    return { success: true };
+  } catch (error: any) {
+    const status = error.response?.status || error.status;
     return {
       success: false,
-      error: errorMsg,
-      lockedUntil: lockedUntil || undefined,
-      remainingAttempts: Math.max(0, MAX_FAILED_ATTEMPTS - newFailedCount),
+      error: status === 429
+        ? "Terlalu banyak percobaan login. Coba lagi dalam satu menit."
+        : error.response?.data?.message || "Gagal masuk ke server. Periksa koneksi dan kredensial Anda.",
+      lockedUntil: status === 429 ? Date.now() + 60 * 1000 : undefined,
     };
   }
-
-  // 4. Autentikasi Berhasil: Buat session token
-  const activeUsername = isArfiandre ? "Arfiandre" : settings.username;
-  createAdminSession(activeUsername, rememberMe);
-
-  return { success: true };
 }
 
 export function logoutSuperadmin(): void {
@@ -270,59 +226,31 @@ export async function changeSuperadminPassword(
     return { success: false, error: "Lingkungan tidak didukung." };
   }
 
-  const settings = getSecuritySettings();
-
-  // Validasi password saat ini
-  const currentHash = await hashPassword(currentPasswordInput, settings.salt);
-  const isDefaultPlain =
-    settings.passwordHash === DEFAULT_PASSWORD_HASH &&
-    currentPasswordInput === DEFAULT_PASSWORD_PLAIN;
-  if (currentHash !== settings.passwordHash && !isDefaultPlain) {
-    return { success: false, error: "Kata sandi saat ini yang Anda masukkan salah." };
-  }
-
-  if (newPasswordInput.length < 8) {
-    return {
-      success: false,
-      error: "Kata sandi baru minimal harus terdiri dari 8 karakter.",
-    };
-  }
-
-  const newSalt = `salt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const newHash = await hashPassword(newPasswordInput, newSalt);
-
-  const updatedSettings: AdminSecuritySettings = {
-    ...settings,
-    username: newUsernameInput ? newUsernameInput.trim() : settings.username,
-    passwordHash: newHash,
-    salt: newSalt,
-    updatedAt: new Date().toISOString(),
-    failedAttempts: 0,
-    lockedUntil: null,
-  };
-
-  saveSecuritySettings(updatedSettings);
-
-  // Perbarui username di sesi aktif jika diubah
-  const activeSession = getActiveSession();
-  if (activeSession) {
-    const updatedSession: AdminSession = {
-      ...activeSession,
-      username: updatedSettings.username,
-    };
-    const raw = JSON.stringify(updatedSession);
-    if (activeSession.rememberMe) {
-      localStorage.setItem(AUTH_SESSION_KEY, raw);
-    } else {
-      sessionStorage.setItem(AUTH_SESSION_KEY, raw);
+  try {
+    const result = await postAdminRequest("/api/admin/security/password", {
+      current_password: currentPasswordInput,
+      new_password: newPasswordInput,
+      new_username: newUsernameInput?.trim(),
+    });
+    if (!result.success) {
+      return { success: false, error: result.message || "Gagal memperbarui kredensial di server." };
     }
+
+    const username = result.username || result.user?.username || newUsernameInput?.trim() || getSecuritySettings().username;
+    const activeSession = getActiveSession();
+    if (activeSession) {
+      const raw = JSON.stringify({ ...activeSession, username });
+      if (activeSession.rememberMe) {
+        localStorage.setItem(AUTH_SESSION_KEY, raw);
+      } else {
+        sessionStorage.setItem(AUTH_SESSION_KEY, raw);
+      }
+    }
+    saveSecuritySettings({ ...getSecuritySettings(), username, updatedAt: new Date().toISOString() });
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.response?.data?.message || "Gagal memperbarui kredensial di server." };
   }
-
-  return { success: true };
-}
-
-export function resetSuperadminSecurityToDefault(): void {
-  saveSecuritySettings(DEFAULT_SECURITY_SETTINGS);
 }
 
 function generateSecureToken(): string {

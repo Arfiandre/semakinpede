@@ -17,7 +17,7 @@ import {
   getStoredEvents,
   saveStoredEvents,
   EVENT_UPDATE_EVENT,
-  DEFAULT_EVENTS,
+  EVENT_STORAGE_KEY,
   normalizeEventItem,
 } from "@/lib/eventStorage";
 import { getSiteSettings } from "@/lib/siteSettingsStorage";
@@ -30,7 +30,7 @@ interface LatestEventPopupModalProps {
 }
 
 export default function LatestEventPopupModal({
-  initialEvents = [],
+  initialEvents,
 }: LatestEventPopupModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [event, setEvent] = useState<EventItem | null>(null);
@@ -39,7 +39,7 @@ export default function LatestEventPopupModal({
   // Helper untuk memilih event terkini (prioritas: ongoing, lalu upcoming, lalu pertama)
   const selectLatestEvent = useCallback(() => {
     let list: EventItem[] = [];
-    if (Array.isArray(initialEvents) && initialEvents.length > 0) {
+    if (Array.isArray(initialEvents)) {
       list = initialEvents.map(normalizeEventItem);
     } else {
       list = getStoredEvents();
@@ -55,6 +55,7 @@ export default function LatestEventPopupModal({
   useEffect(() => {
     // 1. Ambil event terkini dari props / storage
     const current = selectLatestEvent();
+    let latestEvent = current;
     setEvent(current);
 
     // 2. Fetch realtime data terkini dari /api/events
@@ -65,24 +66,26 @@ export default function LatestEventPopupModal({
         });
         if (res.ok) {
           const serverData = await res.json();
-          if (Array.isArray(serverData) && serverData.length > 0) {
+          if (Array.isArray(serverData)) {
             const mapped = serverData.map(normalizeEventItem);
             saveStoredEvents(mapped);
             const ongoing = mapped.find((e) => e.status === "ongoing");
             const upcoming = mapped.find((e) => e.status === "upcoming");
-            setEvent(ongoing || upcoming || mapped[0] || null);
+            latestEvent = ongoing || upcoming || mapped[0] || null;
+            setEvent(latestEvent);
           }
         }
       } catch {}
     };
-    fetchFresh();
+    if (!Array.isArray(initialEvents)) {
+      fetchFresh();
+    }
 
     // 3. Pasang timer 5 detik (5000ms) setelah landing page selesai mendarat
     const timer = setTimeout(() => {
       try {
         const isDismissed = sessionStorage.getItem(POPUP_DISMISSED_KEY);
         if (!isDismissed) {
-          const latestEvent = selectLatestEvent();
           if (latestEvent) {
             setEvent(latestEvent);
             setIsOpen(true);
@@ -96,17 +99,25 @@ export default function LatestEventPopupModal({
 
     // Listener jika ada pembaruan event dari superadmin
     const handleUpdate = () => {
-      const updated = selectLatestEvent();
-      setEvent(updated);
+      const updated = getStoredEvents();
+      latestEvent = updated.find((item) => item.status === "ongoing")
+        || updated.find((item) => item.status === "upcoming")
+        || updated[0] || null;
+      setEvent(latestEvent);
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === EVENT_STORAGE_KEY) {
+        handleUpdate();
+      }
     };
 
     window.addEventListener(EVENT_UPDATE_EVENT, handleUpdate);
-    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener(EVENT_UPDATE_EVENT, handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
     };
   }, [selectLatestEvent]);
 

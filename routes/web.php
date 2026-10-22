@@ -56,23 +56,21 @@ Route::middleware(['auth'])->group(function () {
             ->name('admin.security.password');
 
         // Events CRUD
-        Route::get('/events', [EventController::class, 'index'])->name('events.index');
         Route::post('/events', [EventController::class, 'store'])->name('events.store');
         Route::delete('/events/{id}', [EventController::class, 'destroy'])->name('events.destroy');
 
         // Brokers CRUD
-        Route::get('/brokers', [BrokerController::class, 'index'])->name('brokers.index');
         Route::post('/brokers', [BrokerController::class, 'store'])->name('brokers.store');
         Route::delete('/brokers/{id}', [BrokerController::class, 'destroy'])->name('brokers.destroy');
 
         // Leads Management
         Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
+        Route::get('/leads/{id}/evidence/{type}', [LeadController::class, 'evidence'])->name('leads.evidence');
         Route::get('/participants', [LeadController::class, 'participants'])->name('participants.index');
         Route::delete('/leads/{id}', [LeadController::class, 'destroy'])->name('leads.destroy');
         Route::delete('/leads', [LeadController::class, 'clearAll'])->name('leads.clearAll');
 
         // Site Settings
-        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
 
         // Database Backup & Restore

@@ -6,38 +6,23 @@ use App\Models\Broker;
 use App\Models\EconomicNews;
 use App\Models\Event;
 use App\Models\SiteSetting;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Superadmin User
-        User::updateOrCreate(
-            ['username' => 'superadmin'],
-            [
-                'name' => 'Superadmin Semakin Pede',
-                'email' => 'admin@semakinpede.com',
-                'password' => Hash::make('SemakinPede2026!'),
-            ]
-        );
+        if (app()->isProduction()) {
+            $this->command?->warn('Seeder contoh dinonaktifkan di production. Kelola data melalui admin.');
 
-        User::updateOrCreate(
-            ['username' => 'Arfiandre'],
-            [
-                'name' => 'Arfiandre',
-                'email' => 'arfiandre@semakinpede.com',
-                'password' => Hash::make('matematika'),
-            ]
-        );
+            return;
+        }
 
         // 2. Default Event
         $competitionPoster = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'><defs><linearGradient id='bgGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%23060E1B'/><stop offset='60%25' stop-color='%230F2140'/><stop offset='100%25' stop-color='%23060E1B'/></linearGradient><linearGradient id='goldGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%23F59E0B'/><stop offset='50%25' stop-color='%23FCD34D'/><stop offset='100%25' stop-color='%23B45309'/></linearGradient></defs><rect width='800' height='450' fill='url(%23bgGrad)'/><circle cx='650' cy='225' r='180' fill='%23D4AF37' fill-opacity='0.08'/><path d='M60 340 L180 270 L280 290 L420 180 L520 200 L680 90 L740 110' stroke='%23D4AF37' stroke-width='4' fill='none' stroke-linecap='round'/><g fill='%2310B981' opacity='0.75'><rect x='200' y='220' width='8' height='50' rx='2'/><line x1='204' y1='205' x2='204' y2='285' stroke='%2310B981' stroke-width='2'/><rect x='340' y='160' width='8' height='60' rx='2'/><line x1='344' y1='145' x2='344' y2='235' stroke='%2310B981' stroke-width='2'/><rect x='580' y='110' width='8' height='80' rx='2'/><line x1='584' y1='95' x2='584' y2='205' stroke='%2310B981' stroke-width='2'/></g><rect x='60' y='50' width='210' height='30' rx='8' fill='%23D4AF37' fill-opacity='0.2'/><text x='74' y='71' fill='%23FCD34D' font-family='system-ui, sans-serif' font-weight='bold' font-size='12' letter-spacing='1'>TRADING COMPETITION</text><text x='60' y='140' fill='%23FFFFFF' font-family='system-ui, sans-serif' font-weight='900' font-size='38' letter-spacing='-0.5'>TRADING SEMAKIN PEDE</text><text x='60' y='185' fill='url(%23goldGrad)' font-family='system-ui, sans-serif' font-weight='900' font-size='38' letter-spacing='-0.5'>COMPETITION 2026</text><text x='60' y='225' fill='%23E2E8F0' font-family='system-ui, sans-serif' font-size='15'>Kategori: Best Performance (Profit) &amp; Best Volume</text><rect x='60' y='265' width='230' height='36' rx='8' fill='%230A1628' stroke='%23D4AF37' stroke-width='1'/><text x='74' y='288' fill='%23FCD34D' font-family='system-ui, sans-serif' font-weight='bold' font-size='13'>Total Hadiah Rp 5.700.000</text><rect x='305' y='265' width='230' height='36' rx='8' fill='%230A1628' stroke='%231E293B' stroke-width='1'/><text x='319' y='288' fill='%2394A3B8' font-family='system-ui, sans-serif' font-size='13'>29 Okt 2026 (Daftar s.d 26 Okt)</text><g transform='translate(600, 160)'><path d='M20 70 L20 100 L60 100 L60 70 Z M0 20 L80 20 L70 65 L10 65 Z M-10 25 C -25 25, -25 50, 0 50 M90 25 C 105 25, 105 50, 80 50' fill='none' stroke='url(%23goldGrad)' stroke-width='4' stroke-linejoin='round'/><circle cx='40' cy='38' r='10' fill='url(%23goldGrad)' opacity='0.8'/></g><rect x='60' y='360' width='360' height='30' rx='6' fill='%23060E1B'/><text x='72' y='380' fill='%2364748B' font-family='system-ui, sans-serif' font-size='11'>Didukung Pialang Legal BAPPEBTI: TPFX &bull; Tanpa Biaya Pendaftaran</text></svg>";
 
-        Event::updateOrCreate(
+        Event::firstOrCreate(
             ['id' => 'event-trading-competition-okt-2026'],
             [
                 'poster_image' => $competitionPoster,
@@ -72,7 +57,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 3. Default Broker (TPFX)
-        Broker::updateOrCreate(
+        Broker::firstOrCreate(
             ['id' => 'broker-tpfx'],
             [
                 'name' => 'PT Trijaya Pratama Futures (TPFX)',
@@ -98,7 +83,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 4. Default Site Settings
-        SiteSetting::updateOrCreate(
+        SiteSetting::firstOrCreate(
             ['id' => 1],
             [
                 'project_title' => 'Semakin Pede',
@@ -123,8 +108,6 @@ class DatabaseSeeder extends Seeder
                 $months = ['Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr', 'May' => 'Mei', 'Jun' => 'Jun', 'Jul' => 'Jul', 'Aug' => 'Agt', 'Sep' => 'Sep', 'Oct' => 'Okt', 'Nov' => 'Nov', 'Dec' => 'Des'];
                 $tzWib = new \DateTimeZone('Asia/Jakarta');
                 $todayStart = new \DateTime('today', $tzWib);
-
-                EconomicNews::truncate();
 
                 foreach (array_slice($rawNews, 0, 40) as $index => $item) {
                     $id = 'ff-news-'.md5(($item['title'] ?? '').($item['date'] ?? '').$index);
@@ -154,7 +137,7 @@ class DatabaseSeeder extends Seeder
                         // ignore date parse error
                     }
 
-                    EconomicNews::updateOrCreate(
+                    EconomicNews::firstOrCreate(
                         ['id' => $id],
                         [
                             'title' => $item['title'] ?? 'Economic Release',

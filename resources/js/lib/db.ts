@@ -171,17 +171,20 @@ export function deduplicateDBLeads(leads: DBLead[]): DBLead[] {
   const map = new Map<string, DBLead>();
   for (const lead of leads) {
     let key: string;
-    const digits = (lead.contact || "").replace(/[^0-9]/g, "");
-    const suffix = digits.length >= 8 ? digits.slice(-9) : (lead.contact || "");
+    let contact = (lead.contact || "").trim().toLowerCase();
+    if (lead.contactType === "wa") {
+      contact = contact.replace(/[^0-9]/g, "").replace(/^00/, "");
+      if (contact.startsWith("0")) {
+        contact = `62${contact.slice(1)}`;
+      }
+    }
 
-    if (lead.demoAccountNumber && lead.demoAccountNumber.trim().length >= 4) {
-      key = `demo:${lead.demoAccountNumber.trim()}`;
-    } else if (lead.eventId && suffix) {
-      key = `event:${lead.eventId}:${suffix}`;
-    } else if (lead.eventTitle && suffix) {
-      key = `event_title:${lead.eventTitle}:${suffix}`;
-    } else if (suffix && lead.name && lead.name !== "-") {
-      key = `lead:${suffix}:${lead.name.toLowerCase().trim()}`;
+    if (lead.eventId && contact) {
+      key = JSON.stringify(["event", lead.eventId, contact]);
+    } else if (lead.eventTitle && contact) {
+      key = JSON.stringify(["event_title", lead.eventTitle, contact]);
+    } else if (contact && lead.name && lead.name !== "-") {
+      key = JSON.stringify(["lead", contact, lead.name.toLowerCase().trim()]);
     } else {
       key = `id:${lead.id}`;
     }
@@ -204,7 +207,73 @@ export function deduplicateDBLeads(leads: DBLead[]): DBLead[] {
   return Array.from(map.values());
 }
 
-export async function insertLeadDB(lead: DBLead): Promise<void> {
+export function normalizeDBLead(raw: any): DBLead {
+  return {
+    id: String(raw.id),
+    name: raw.name || "-",
+    contactType: raw.contact_type || raw.contactType || "wa",
+    contact: raw.contact || "-",
+    level: raw.level || "Pemula",
+    source: raw.source || "Website",
+    timestamp: raw.submitted_at || raw.created_at || raw.timestamp || new Date().toISOString(),
+    notes: raw.notes || undefined,
+    eventId: raw.event_id || raw.eventId || undefined,
+    eventTitle: raw.event_title || raw.eventTitle || undefined,
+    hasAccount: raw.has_account || raw.hasAccount || undefined,
+    demoAccountNumber: raw.demo_account_number || raw.demoAccountNumber || undefined,
+    demoInvestorPassword: raw.demo_investor_password || raw.demoInvestorPassword || undefined,
+    screenshotRealAccount: raw.screenshot_real_account || raw.screenshotRealAccount || undefined,
+    screenshotTransfer: raw.screenshot_transfer || raw.screenshotTransfer || undefined,
+  };
+}
+
+export async function loadAuthoritativeLeads(
+  endpoint: "/api/leads" | "/api/participants",
+  readFallback: () => Promise<DBLead[]>
+): Promise<DBLead[]> {
+  let leads: DBLead[];
+  try {
+    const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
+    if (!response.ok) {
+      throw new Error("Daftar peserta belum dapat dimuat dari server.");
+    }
+    const serverLeads = await response.json();
+    if (!Array.isArray(serverLeads)) {
+      throw new Error("Format daftar peserta dari server tidak valid.");
+    }
+    leads = serverLeads.map(normalizeDBLead);
+  } catch {
+    leads = await readFallback();
+  }
+  return deduplicateDBLeads(leads).sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+}
+
+export async function deleteServerLeads(id?: string): Promise<void> {
+  const endpoint = id ? `/api/leads/${encodeURIComponent(id)}` : "/api/leads";
+  if ((window as any).axios) {
+    const response = await (window as any).axios.delete(endpoint);
+    if (response.data?.success === false) {
+      throw new Error("Server belum menghapus data.");
+    }
+    return;
+  }
+  const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+  const response = await fetch(endpoint, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error("Server belum menghapus data.");
+  }
+}
+
+async function cacheLeadDB(lead: DBLead): Promise<void> {
   try {
     await performTransaction("leads", "readwrite", (store) => {
       store.put(lead);
@@ -213,30 +282,35 @@ export async function insertLeadDB(lead: DBLead): Promise<void> {
   } catch (err) {
     console.warn("Gagal menyimpan lead ke IndexedDB:", err);
   }
+}
 
-  // Sinkronisasi otomatis ke backend Laravel
-  try {
-    if (typeof window !== "undefined") {
-      if ((window as any).axios) {
-        await (window as any).axios.post("/api/leads", lead);
-      } else {
-        const response = await fetch("/api/leads", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(lead),
-        });
-        if (!response.ok) {
-          throw new Error("Data dan berkas belum tersimpan di server. Silakan coba kirim kembali.");
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("Gagal sinkronisasi lead ke server Laravel:", err);
-    throw err;
+export async function insertLeadDB(lead: DBLead): Promise<void> {
+  if (typeof window === "undefined") {
+    throw new Error("Pendaftaran harus dikirim melalui browser.");
   }
+
+  let serverLead: { id?: string } | undefined;
+  if ((window as any).axios) {
+    const response = await (window as any).axios.post("/api/leads", lead);
+    serverLead = response.data?.lead;
+  } else {
+    const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+    const response = await fetch("/api/leads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
+      },
+      body: JSON.stringify(lead),
+    });
+    if (!response.ok) {
+      throw new Error("Data dan berkas belum tersimpan di server. Silakan coba kirim kembali.");
+    }
+    serverLead = (await response.json()).lead;
+  }
+
+  await cacheLeadDB({ ...lead, id: serverLead?.id || lead.id });
 }
 
 export async function getAllLeadsDB(): Promise<DBLead[]> {
@@ -450,7 +524,7 @@ export async function syncStorageWithIndexedDB(): Promise<void> {
       if (Array.isArray(parsedLeads)) {
         for (const item of parsedLeads) {
           const leadId = item.id || `lead-${new Date(item.timestamp || Date.now()).getTime()}-${Math.random().toString(36).substring(2, 6)}`;
-          await insertLeadDB({ ...item, id: leadId });
+          await cacheLeadDB({ ...item, id: leadId });
         }
       }
     }
@@ -572,7 +646,7 @@ export async function importFullDatabase(snapshot: DatabaseSnapshot): Promise<bo
 
     if (Array.isArray(snapshot.tables.leads)) {
       for (const lead of snapshot.tables.leads) {
-        await insertLeadDB(lead);
+        await cacheLeadDB(lead);
       }
       localStorage.setItem("kfi_leads", JSON.stringify(snapshot.tables.leads));
     }

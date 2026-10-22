@@ -1,16 +1,12 @@
 import { useEffect, useState } from "react";
 import { router, Head } from "@inertiajs/react";
 import AdminLoginForm from "@/components/admin/AdminLoginForm";
-import { isSuperadminAuthenticated } from "@/lib/authStorage";
 
 export default function AdminLoginPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    if (isSuperadminAuthenticated()) {
-      router.replace("/admin");
-    }
   }, []);
 
   if (!mounted) {
@@ -30,7 +26,7 @@ export default function AdminLoginPage() {
       <Head title="Login Superadmin - Semakin Pede" />
       <AdminLoginForm
         onSuccess={() => {
-          router.replace("/admin");
+          router.visit("/admin", { replace: true });
         }}
       />
     </>

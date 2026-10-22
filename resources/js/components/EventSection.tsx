@@ -20,7 +20,7 @@ import {
   getStoredEvents,
   saveStoredEvents,
   EVENT_UPDATE_EVENT,
-  DEFAULT_EVENTS,
+  EVENT_STORAGE_KEY,
   normalizeEventItem,
 } from "@/lib/eventStorage";
 import { getSiteSettings } from "@/lib/siteSettingsStorage";
@@ -30,9 +30,9 @@ interface EventSectionProps {
   initialEvents?: any[];
 }
 
-export default function EventSection({ initialEvents = [] }: EventSectionProps) {
+export default function EventSection({ initialEvents }: EventSectionProps) {
   const [events, setEvents] = useState<EventItem[]>(() => {
-    if (Array.isArray(initialEvents) && initialEvents.length > 0) {
+    if (Array.isArray(initialEvents)) {
       return initialEvents.map(normalizeEventItem);
     }
     return getStoredEvents();
@@ -48,7 +48,7 @@ export default function EventSection({ initialEvents = [] }: EventSectionProps) 
 
   useEffect(() => {
     // 1. Jika ada initialEvents dari server Laravel, gunakan dan sinkronkan ke cache
-    if (Array.isArray(initialEvents) && initialEvents.length > 0) {
+    if (Array.isArray(initialEvents)) {
       const mapped = initialEvents.map(normalizeEventItem);
       setEvents(mapped);
       saveStoredEvents(mapped);
@@ -64,7 +64,7 @@ export default function EventSection({ initialEvents = [] }: EventSectionProps) 
         });
         if (res.ok) {
           const serverData = await res.json();
-          if (Array.isArray(serverData) && serverData.length > 0) {
+          if (Array.isArray(serverData)) {
             const mapped = serverData.map(normalizeEventItem);
             setEvents(mapped);
             saveStoredEvents(mapped);
@@ -74,19 +74,26 @@ export default function EventSection({ initialEvents = [] }: EventSectionProps) 
         // Fallback ke cache lokal
       }
     };
-    fetchFreshEvents();
+    if (!Array.isArray(initialEvents)) {
+      fetchFreshEvents();
+    }
 
     // 3. Listen for updates from superadmin CRUD
     const handleUpdate = () => {
       setEvents(getStoredEvents());
     };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === EVENT_STORAGE_KEY) {
+        handleUpdate();
+      }
+    };
 
     window.addEventListener(EVENT_UPDATE_EVENT, handleUpdate);
-    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
       window.removeEventListener(EVENT_UPDATE_EVENT, handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
     };
   }, [initialEvents]);
 

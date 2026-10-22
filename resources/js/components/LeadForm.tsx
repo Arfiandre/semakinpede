@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import {
   Send,
   MessageCircle,
@@ -29,7 +29,7 @@ interface LeadFormProps {
   source?: string;
 }
 
-function saveLead(lead: {
+async function saveLead(lead: {
   name: string;
   contactType: ContactType;
   contact: string;
@@ -38,19 +38,7 @@ function saveLead(lead: {
   timestamp: string;
 }) {
   const leadId = `lead-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-  try {
-    const raw = localStorage.getItem("kfi_leads");
-    const leads = raw ? JSON.parse(raw) : [];
-    leads.push({ ...lead, id: leadId });
-    localStorage.setItem("kfi_leads", JSON.stringify(leads));
-  } catch {
-    // localStorage unavailable
-  }
-
-  // Simpan ke database IndexedDB
-  insertLeadDB({ ...lead, id: leadId }).catch(() => {
-    // Non-blocking
-  });
+  await insertLeadDB({ ...lead, id: leadId });
 }
 
 export default function LeadForm({
@@ -64,34 +52,27 @@ export default function LeadForm({
   const [level, setLevel] = useState<Level>("Pemula");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const cleanup = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !contact.trim()) return;
+    if (isSubmitting || !name.trim() || !contact.trim()) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
 
     const message = `Halo, saya ${name.trim()} ingin bergabung dengan komunitas edukasi Semakin Pede.\n\nLevel: ${level}\nKontak: ${contact.trim()}\nSumber: ${source}`;
 
-    saveLead({
-      name: name.trim(),
-      contactType,
-      contact: contact.trim(),
-      level,
-      source,
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      await saveLead({
+        name: name.trim(),
+        contactType,
+        contact: contact.trim(),
+        level,
+        source,
+        timestamp: new Date().toISOString(),
+      });
 
-    timeoutRef.current = setTimeout(() => {
-      setIsSubmitting(false);
       setIsSubmitted(true);
 
       if (contactType === "wa") {
@@ -109,7 +90,11 @@ export default function LeadForm({
       } else {
         window.location.href = `mailto:${EMAIL_ADDRESS}?subject=${encodeURIComponent("Gabung Komunitas Semakin Pede")}&body=${encodeURIComponent(message)}`;
       }
-    }, 400);
+    } catch {
+      setSubmitError("Pendaftaran belum tersimpan di server. Periksa koneksi lalu coba kirim kembali.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
@@ -275,6 +260,7 @@ export default function LeadForm({
         >
           {isSubmitting ? "Memproses..." : "Daftar"}
         </button>
+        {submitError && <p role="alert">{submitError}</p>}
       </form>
     );
   }
@@ -443,6 +429,7 @@ export default function LeadForm({
 
       {/* Tombol Aksi Utama */}
       <div className="mt-6">
+        {submitError && <p role="alert" className="text-sm text-red-700 mb-3">{submitError}</p>}
         <button
           type="submit"
           disabled={isSubmitting}

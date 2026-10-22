@@ -14,9 +14,6 @@ import {
 import { Link } from "@inertiajs/react";
 import {
   authenticateSuperadmin,
-  createAdminSession,
-  getSecuritySettings,
-  resetSuperadminSecurityToDefault,
 } from "@/lib/authStorage";
 
 interface AdminLoginFormProps {
@@ -31,13 +28,13 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lockRemainingSeconds, setLockRemainingSeconds] = useState<number>(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
 
   // Periksa apakah sedang dalam status lockout
   useEffect(() => {
     const checkLockStatus = () => {
-      const settings = getSecuritySettings();
-      if (settings.lockedUntil && settings.lockedUntil > Date.now()) {
-        const remaining = Math.ceil((settings.lockedUntil - Date.now()) / 1000);
+      if (lockedUntil && lockedUntil > Date.now()) {
+        const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
         setLockRemainingSeconds(remaining);
       } else {
         setLockRemainingSeconds(0);
@@ -47,10 +44,11 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
     checkLockStatus();
     const interval = setInterval(checkLockStatus, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [lockedUntil]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setErrorMessage(null);
 
     if (!username.trim() || !password) {
@@ -68,33 +66,6 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
     setIsLoading(true);
 
     try {
-      if (typeof window !== "undefined" && (window as any).axios) {
-        try {
-          const resp = await (window as any).axios.post("/admin/login", {
-            username: username.trim(),
-            password,
-            remember: rememberMe,
-          });
-          if (resp.data && resp.data.success) {
-            const adminUser = resp.data.user?.username || username.trim();
-            createAdminSession(adminUser, rememberMe);
-            onSuccess();
-            return;
-          }
-        } catch (serverErr: any) {
-          if (serverErr.response?.status === 429) {
-            setErrorMessage("Terlalu banyak percobaan login. Akun diamankan sementara, coba lagi dalam 1 menit.");
-            setIsLoading(false);
-            return;
-          }
-          if (serverErr.response?.data?.message) {
-            setErrorMessage(serverErr.response.data.message);
-            setIsLoading(false);
-            return;
-          }
-        }
-      }
-
       const res = await authenticateSuperadmin(username, password, rememberMe);
 
       if (res.success) {
@@ -104,6 +75,7 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
           res.error || "Gagal masuk. Periksa kembali kredensial superadmin Anda."
         );
         if (res.lockedUntil) {
+          setLockedUntil(res.lockedUntil);
           const remaining = Math.ceil((res.lockedUntil - Date.now()) / 1000);
           setLockRemainingSeconds(remaining);
         }
@@ -165,17 +137,6 @@ export default function AdminLoginForm({ onSuccess }: AdminLoginFormProps) {
                   </span>{" "}
                   sebelum mencoba kembali.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetSuperadminSecurityToDefault();
-                    setLockRemainingSeconds(0);
-                    setErrorMessage(null);
-                  }}
-                  className="mt-2 text-xs text-amber-400 hover:text-amber-300 underline font-semibold block"
-                >
-                  Buka Kunci Akses Sekarang
-                </button>
               </div>
             </div>
           )}

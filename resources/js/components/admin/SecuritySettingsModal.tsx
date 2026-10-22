@@ -10,14 +10,10 @@ import {
   EyeOff,
   CheckCircle2,
   AlertCircle,
-  RotateCcw,
 } from "lucide-react";
 import {
   getSecuritySettings,
   changeSuperadminPassword,
-  resetSuperadminSecurityToDefault,
-  DEFAULT_USERNAME,
-  DEFAULT_PASSWORD_PLAIN,
 } from "@/lib/authStorage";
 
 interface SecuritySettingsModalProps {
@@ -78,19 +74,15 @@ export default function SecuritySettingsModal({
     setIsLoading(true);
 
     try {
-      if (typeof window !== "undefined" && (window as any).axios) {
-        await (window as any).axios.post("/api/admin/security/password", {
-          current_password: currentPassword,
-          new_password: newPassword,
-          new_username: newUsername,
-        });
-      }
-
-      await changeSuperadminPassword(
+      const result = await changeSuperadminPassword(
         currentPassword,
         newPassword,
         newUsername
       );
+      if (!result.success) {
+        setErrorMsg(result.error || "Gagal memperbarui kredensial di server.");
+        return;
+      }
 
       setSuccessMsg("Kredensial superadmin berhasil diperbarui di database server.");
       setCurrentUsername(newUsername);
@@ -106,25 +98,6 @@ export default function SecuritySettingsModal({
       }
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleResetToDefault = () => {
-    if (
-      confirm(
-        `Reset kredensial ke default sistem?\nUsername: ${DEFAULT_USERNAME}\nPassword: ${DEFAULT_PASSWORD_PLAIN}`
-      )
-    ) {
-      resetSuperadminSecurityToDefault();
-      setNewUsername(DEFAULT_USERNAME);
-      setCurrentUsername(DEFAULT_USERNAME);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setSuccessMsg(
-        `Kredensial berhasil dikembalikan ke default: ${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD_PLAIN}`
-      );
-      if (onUpdated) onUpdated();
     }
   };
 
@@ -286,15 +259,6 @@ export default function SecuritySettingsModal({
 
           {/* Action Buttons */}
           <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={handleResetToDefault}
-              className="text-xs text-slate-500 hover:text-rose-600 font-medium flex items-center gap-1.5 transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset ke Default</span>
-            </button>
-
             <div className="flex items-center gap-2">
               <button
                 type="button"

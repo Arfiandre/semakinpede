@@ -15,39 +15,31 @@ class AdminController extends Controller
 {
     public function index(): Response
     {
-        $events = Event::orderBy('start_date', 'asc')->get();
-        $brokers = Broker::orderBy('order', 'asc')->get();
-        $news = EconomicNews::limit(100)->get();
-        $settings = SiteSetting::first();
-        $rawLeads = Lead::orderBy('created_at', 'desc')->get();
-        $leads = LeadController::deduplicateCollection($rawLeads)->values();
-        $auditLogs = AuditLog::orderBy('timestamp', 'desc')->limit(50)->get();
-
-        $stats = [
-            'leadsCount' => $leads->count(),
-            'eventsCount' => $events->count(),
-            'brokersCount' => $brokers->count(),
-            'settingsCount' => $settings ? 1 : 0,
-            'newsCount' => $news->count(),
-            'auditLogsCount' => $auditLogs->count(),
-            'lastUpdated' => now()->toIso8601String(),
-            'storageEngine' => 'MySQL / Eloquent Database',
-        ];
-
         return Inertia::render('Admin/Dashboard', [
-            'initialEvents' => $events,
-            'initialBrokers' => $brokers,
-            'initialNews' => $news,
-            'initialSettings' => $settings,
-            'initialLeads' => $leads,
-            'initialStats' => $stats,
-            'auditLogs' => $auditLogs,
+            'initialEvents' => fn () => Event::orderBy('start_date', 'asc')->get(),
+            'initialBrokers' => fn () => Broker::orderBy('order', 'asc')->get(),
+            'initialNews' => fn () => EconomicNews::limit(100)->get(),
+            'initialSettings' => fn () => SiteSetting::first(),
+            'initialLeads' => fn () => LeadController::deduplicateCollection(
+                LeadController::withEvidenceLinks(Lead::forAdminListing()->orderBy('created_at', 'desc')->get()),
+            )->values(),
+            'initialStats' => fn () => [
+                'leadsCount' => Lead::count(),
+                'eventsCount' => Event::count(),
+                'brokersCount' => Broker::count(),
+                'settingsCount' => SiteSetting::count(),
+                'newsCount' => EconomicNews::count(),
+                'auditLogsCount' => AuditLog::count(),
+                'lastUpdated' => now()->toIso8601String(),
+                'storageEngine' => 'Eloquent Database',
+            ],
+            'auditLogs' => fn () => AuditLog::orderBy('timestamp', 'desc')->limit(50)->get(),
         ]);
     }
 
     public function participants(): Response
     {
-        $rawParticipants = Lead::whereNotNull('event_id')
+        $rawParticipants = Lead::forAdminListing()->whereNotNull('event_id')
             ->orWhereNotNull('event_title')
             ->orWhereNotNull('demo_account_number')
             ->orWhereNotNull('has_account')
@@ -55,7 +47,7 @@ class AdminController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $participants = LeadController::deduplicateCollection($rawParticipants)->values();
+        $participants = LeadController::deduplicateCollection(LeadController::withEvidenceLinks($rawParticipants))->values();
 
         return Inertia::render('Admin/Participants', [
             'initialParticipants' => $participants,

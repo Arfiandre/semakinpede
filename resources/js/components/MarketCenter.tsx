@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   TrendingUp,
   Calendar,
@@ -47,6 +47,24 @@ export default function MarketCenter() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const chartContainer = useRef<HTMLDivElement>(null);
+  const [isChartVisible, setIsChartVisible] = useState(false);
+
+  useEffect(() => {
+    if (!chartContainer.current || !("IntersectionObserver" in window)) {
+      setIsChartVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsChartVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "300px" });
+    observer.observe(chartContainer.current);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     // 1. Ambil data awal dari penyimpanan
@@ -78,19 +96,13 @@ export default function MarketCenter() {
     runAutoCheck();
 
     // 3. Interval background: update berkala otomatis setiap 10 menit
-    const periodicTimer = setInterval(async () => {
-      await refreshForexFactoryNews();
-      setNewsEvents(getStoredForexFactoryNews());
-      const nowSync = getLastSyncTimestamp();
-      if (nowSync) {
-        setLastSyncTime(
-          new Date(nowSync).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        );
+    const checkVisibleNews = () => {
+      if (document.visibilityState === "visible") {
+        void runAutoCheck();
       }
-    }, 10 * 60 * 1000);
+    };
+    const periodicTimer = setInterval(checkVisibleNews, 10 * 60 * 1000);
+    document.addEventListener("visibilitychange", checkVisibleNews);
 
     // 4. Listener update event
     const handleUpdate = () => {
@@ -110,6 +122,7 @@ export default function MarketCenter() {
     window.addEventListener("storage", handleUpdate);
     return () => {
       clearInterval(periodicTimer);
+      document.removeEventListener("visibilitychange", checkVisibleNews);
       window.removeEventListener(NEWS_UPDATE_EVENT, handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
@@ -266,14 +279,14 @@ export default function MarketCenter() {
             </div>
 
             {/* TradingView Widget Container */}
-            <div className="bg-navy-950 min-h-[460px]">
-              <TradingViewWidget
+            <div ref={chartContainer} className="bg-navy-950 min-h-[460px]">
+              {isChartVisible && <TradingViewWidget
                 key={`${selectedSymbol}_${selectedInterval}`}
                 symbol={selectedSymbol}
                 interval={selectedInterval}
                 theme="dark"
                 height={460}
-              />
+              />}
             </div>
           </div>
 

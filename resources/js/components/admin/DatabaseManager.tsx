@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { router, usePage } from "@inertiajs/react";
+import axios from "axios";
 import {
   Database,
   Download,
   Upload,
   RefreshCw,
-  Trash2,
   CheckCircle2,
   AlertCircle,
   HardDrive,
@@ -15,106 +16,64 @@ import {
   Building2,
   Sliders,
   History,
-  ShieldAlert,
 } from "lucide-react";
-import {
-  getDatabaseStats,
-  exportFullDatabase,
-  importFullDatabase,
-  syncStorageWithIndexedDB,
-  getAuditLogsDB,
-  DatabaseStats,
-  DBAuditLog,
-  clearAllLeadsDB,
-} from "@/lib/db";
+import type { DatabaseStats, DBAuditLog } from "@/lib/db";
 
 export default function DatabaseManager() {
-  const [stats, setStats] = useState<DatabaseStats | null>(null);
-  const [logs, setLogs] = useState<DBAuditLog[]>([]);
+  const { initialStats: stats, auditLogs = [] } = usePage<{
+    initialStats: DatabaseStats;
+    auditLogs: DBAuditLog[];
+  }>().props;
+  const logs = auditLogs.slice(0, 15);
   const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      await syncStorageWithIndexedDB();
-      const [s, l] = await Promise.all([getDatabaseStats(), getAuditLogsDB()]);
-      setStats(s);
-      setLogs(l.slice(0, 15));
-    } catch {
-      setFeedback({ type: "error", text: "Gagal memuat status database." });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const loadData = () => {
+    router.reload({
+      only: ["initialStats", "auditLogs"],
+      onStart: () => setIsLoading(true),
+      onError: () => setFeedback({ type: "error", text: "Gagal memuat status database server." }),
+      onFinish: () => setIsLoading(false),
+    });
+  };
 
   const showToast = (type: "success" | "error", text: string) => {
     setFeedback({ type, text });
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  const handleExport = async () => {
-    try {
-      const snapshot = await exportFullDatabase();
-      const jsonStr = JSON.stringify(snapshot, null, 2);
-      const blob = new Blob([jsonStr], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const dateStr = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `semakinpede-database-backup-${dateStr}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("success", "Pencadangan database (JSON snapshot) berhasil diunduh.");
-      loadData();
-    } catch {
-      showToast("error", "Gagal mengekspor cadangan database.");
-    }
+  const handleExport = () => {
+    const link = document.createElement("a");
+    link.href = "/api/database/export";
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm("Peringatan: Memulihkan database akan memperbarui data leads, events, dan kemitraan sesuai file cadangan. Lanjutkan?")) {
+    if (!confirm("Pemulihan hanya menambahkan data yang belum ada. Data dan pengaturan terkini tetap dipertahankan. Gunakan berkas cadangan dari server ini. Lanjutkan?")) {
       e.target.value = "";
       return;
     }
 
+    setIsImporting(true);
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      const ok = await importFullDatabase(parsed);
-      if (ok) {
-        showToast("success", "Database berhasil dipulihkan dari cadangan.");
-        loadData();
-      } else {
-        showToast("error", "Format berkas cadangan database tidak valid.");
-      }
-    } catch {
-      showToast("error", "Gagal membaca atau memulihkan berkas JSON.");
+      const response = await axios.post<{ message: string }>("/api/database/import", parsed);
+      showToast("success", response.data.message);
+      loadData();
+    } catch (error) {
+      const message = axios.isAxiosError(error) ? error.response?.data?.message : null;
+      showToast("error", message || "Gagal membaca atau memulihkan berkas JSON. Data server tetap dipertahankan.");
     } finally {
       e.target.value = "";
-    }
-  };
-
-  const handleSync = async () => {
-    setIsLoading(true);
-    await syncStorageWithIndexedDB();
-    await loadData();
-    showToast("success", "Sinkronisasi dua arah IndexedDB dan LocalStorage berhasil.");
-  };
-
-  const handleClearLeads = async () => {
-    if (confirm("Hapus seluruh data leads dari database? Tindakan ini tidak dapat dibatalkan.")) {
-      await clearAllLeadsDB();
-      localStorage.removeItem("kfi_leads");
-      await loadData();
-      showToast("success", "Data leads dalam database berhasil dikosongkan.");
+      setIsImporting(false);
     }
   };
 
@@ -131,7 +90,7 @@ export default function DatabaseManager() {
               Penyimpanan Database Terintegrasi
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Engine IndexedDB v1 terstruktur untuk leads, events, kemitraan broker, dan log audit
+              Cadangan data aplikasi dari server: leads, agenda, mitra, pengaturan, berita, dan log audit
             </p>
           </div>
         </div>
@@ -139,13 +98,13 @@ export default function DatabaseManager() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={handleSync}
+            onClick={loadData}
             disabled={isLoading}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors disabled:opacity-50"
-            title="Sinkronkan database"
+            title="Perbarui status database server"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-amber-600" : ""}`} />
-            <span>Sinkronkan Data</span>
+            <span>Perbarui Status</span>
           </button>
 
           <button
@@ -159,11 +118,12 @@ export default function DatabaseManager() {
 
           <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-xs cursor-pointer">
             <Upload className="w-3.5 h-3.5" />
-            <span>Pulihkan Database</span>
+            <span>{isImporting ? "Memulihkan Data..." : "Pulihkan Data yang Belum Ada"}</span>
             <input
               type="file"
               accept=".json"
               onChange={handleImportFile}
+              disabled={isImporting}
               className="hidden"
             />
           </label>
@@ -239,10 +199,10 @@ export default function DatabaseManager() {
             </div>
             <div>
               <div className="text-xs font-mono font-bold text-slate-800">
-                IndexedDB v1
+                Database Server
               </div>
               <div className="text-[11px] font-medium text-slate-500">
-                Penyimpanan Permanen
+                {stats?.storageEngine}
               </div>
             </div>
           </div>
@@ -265,32 +225,21 @@ export default function DatabaseManager() {
 
           <div className="space-y-2.5 text-xs">
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-600 font-medium">Database Name</span>
-              <span className="font-mono font-bold text-slate-900">semakin_pede_database_v1</span>
+              <span className="text-slate-600 font-medium">Sumber Data</span>
+              <span className="font-mono font-bold text-slate-900">Database Server</span>
             </div>
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
               <span className="text-slate-600 font-medium">Engine Penyimpanan</span>
-              <span className="font-mono font-semibold text-slate-800">IndexedDB API + Fallback</span>
+              <span className="font-mono font-semibold text-slate-800">Laravel / Eloquent</span>
             </div>
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-600 font-medium">Kapasitas Batas</span>
-              <span className="font-mono text-emerald-700 font-bold">&gt; 1 Gigabyte (Uncapped Quota)</span>
+              <span className="text-slate-600 font-medium">Sumber Cadangan</span>
+              <span className="font-mono text-emerald-700 font-bold">Data aplikasi di server</span>
             </div>
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-600 font-medium">Dukungan Offline</span>
-              <span className="font-mono font-semibold text-emerald-700">Ya, 100% Persisten Lokal</span>
+              <span className="text-slate-600 font-medium">Mode Pemulihan</span>
+              <span className="font-mono font-semibold text-emerald-700">Hanya data yang belum ada</span>
             </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleClearLeads}
-              className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Kosongkan Seluruh Leads</span>
-            </button>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, Head } from "@inertiajs/react";
 import {
   ArrowLeft,
@@ -84,8 +84,7 @@ export default function ParticipantsPage({
   }
 
   // Format initial participants from Laravel if provided
-  const formattedInitial = useMemo<ParticipantItem[]>(() => {
-    return (initialParticipants || []).map((l) => ({
+  const formattedInitial: ParticipantItem[] = (initialParticipants || []).map((l) => ({
       id: l.id || `lead-${Math.random()}`,
       name: l.name || "-",
       contactType: (l.contact_type || l.contactType || "wa") as any,
@@ -101,8 +100,7 @@ export default function ParticipantsPage({
       demoInvestorPassword: l.demo_investor_password || l.demoInvestorPassword || undefined,
       screenshotRealAccount: l.screenshot_real_account || l.screenshotRealAccount || undefined,
       screenshotTransfer: l.screenshot_transfer || l.screenshotTransfer || undefined,
-    }));
-  }, [initialParticipants]);
+  }));
 
   return (
     <div className="min-h-screen bg-slate-100/70">

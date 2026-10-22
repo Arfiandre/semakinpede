@@ -163,19 +163,16 @@ export function getStoredEvents(): EventItem[] {
     return DEFAULT_EVENTS;
   }
   try {
-    // Clear out any old v1/v2/v3 cached data if present
-    localStorage.removeItem("kfi_events");
-    localStorage.removeItem("kfi_events_v2");
-    localStorage.removeItem("kfi_events_v3");
-
-    const raw = localStorage.getItem(EVENT_STORAGE_KEY);
+    const raw = localStorage.getItem(EVENT_STORAGE_KEY)
+      ?? localStorage.getItem("kfi_events_v3")
+      ?? localStorage.getItem("kfi_events_v2")
+      ?? localStorage.getItem("kfi_events");
     if (!raw) {
       localStorage.setItem(EVENT_STORAGE_KEY, JSON.stringify(DEFAULT_EVENTS));
       return DEFAULT_EVENTS;
     }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(EVENT_STORAGE_KEY, JSON.stringify(DEFAULT_EVENTS));
+    if (!Array.isArray(parsed)) {
       return DEFAULT_EVENTS;
     }
     return parsed;
