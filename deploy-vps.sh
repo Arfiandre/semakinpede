@@ -25,7 +25,8 @@ if [ ! -w storage/framework ] || [ ! -w bootstrap/cache ]; then
     exit 1
 fi
 
-exec 9>storage/framework/deploy.lock
+deployment_lock_path="$(git rev-parse --git-path semakinpede-deploy.lock)"
+exec 9>>"$deployment_lock_path"
 if ! flock -n 9; then
     echo "Deployment lain masih berjalan."
     exit 1
@@ -38,6 +39,8 @@ fi
 
 if [ "$(git branch --show-current)" != "main" ] || [ -n "$(git status --porcelain)" ]; then
     echo "Deployment memerlukan branch main yang bersih. Simpan perubahan lokal secara terpisah sebelum melanjutkan."
+    git status --short --branch
+    git diff --summary
     exit 1
 fi
 
