@@ -53,3 +53,7 @@ GEMINI.md
 /.github/instructions/
 /.github/prompts/
 /.aider*
+
+# Local project documentation
+/TECH_STACK.md
+/UPDATE_PHP_2026-10-22.md
