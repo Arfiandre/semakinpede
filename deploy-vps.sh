@@ -19,9 +19,11 @@ echo "⚡ Melakukan build aset frontend (React + Tailwind)..."
 npm ci
 npm run build
 
-# 4. Jalankan migrasi database
-echo "🗄️ Menjalankan migrasi database..."
+# 4. Jalankan migrasi & seeder database
+echo "🗄️ Menjalankan migrasi & seeder database..."
 php artisan migrate --force
+php artisan db:seed --force
+php artisan admin:setup
 
 # 5. Refresh cache Laravel untuk performa optimal
 echo "🚀 Mengoptimasi cache Laravel..."

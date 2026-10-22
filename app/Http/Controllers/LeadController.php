@@ -127,10 +127,10 @@ class LeadController extends Controller
             'demo_account_number' => 'nullable|string|max:50',
             'demoInvestorPassword' => 'nullable|string|max:50',
             'demo_investor_password' => 'nullable|string|max:50',
-            'screenshotRealAccount' => 'nullable|string|max:3000000',
-            'screenshot_real_account' => 'nullable|string|max:3000000',
-            'screenshotTransfer' => 'nullable|string|max:3000000',
-            'screenshot_transfer' => 'nullable|string|max:3000000',
+            'screenshotRealAccount' => 'nullable|string|max:7000000',
+            'screenshot_real_account' => 'nullable|string|max:7000000',
+            'screenshotTransfer' => 'nullable|string|max:7000000',
+            'screenshot_transfer' => 'nullable|string|max:7000000',
         ]);
 
         $providedId = $request->filled('id') ? strip_tags(trim($request->input('id'))) : null;

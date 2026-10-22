@@ -99,6 +99,30 @@ class CompetitionParticipantTest extends TestCase
         ]);
     }
 
+    public function test_uploaded_evidence_up_to_five_megabytes_is_saved_for_admin_preview(): void
+    {
+        $image = 'data:image/png;base64,'.base64_encode(str_repeat('a', 5 * 1024 * 1024));
+
+        $this->postJson('/api/leads', [
+            'id' => 'upload-size-test',
+            'name' => 'Peserta Upload',
+            'contact' => '081234567890',
+            'source' => 'event_trading_account_submitted',
+            'eventId' => 'upload-event',
+            'screenshotRealAccount' => $image,
+            'screenshotTransfer' => $image,
+        ])->assertCreated();
+
+        $lead = Lead::findOrFail('upload-size-test');
+        $this->assertSame($image, $lead->screenshot_real_account);
+        $this->assertSame($image, $lead->screenshot_transfer);
+
+        $this->actingAs(User::factory()->create())
+            ->getJson('/api/participants')
+            ->assertOk()
+            ->assertJsonFragment(['screenshot_real_account' => $image, 'screenshot_transfer' => $image]);
+    }
+
     public function test_arfiandre_can_login_with_matematika_password(): void
     {
         $this->seed();

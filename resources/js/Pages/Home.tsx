@@ -5,10 +5,8 @@ import TickerTape from "@/components/TickerTape";
 import MarketCenter from "@/components/MarketCenter";
 import LearningPaths from "@/components/LearningPaths";
 import EventSection from "@/components/EventSection";
-import TradingJournal from "@/components/TradingJournal";
 import BrokerRecommendation from "@/components/BrokerRecommendation";
 import FAQSection from "@/components/FAQSection";
-import Testimonials from "@/components/Testimonials";
 import Footer from "@/components/Footer";
 import MobileStickyForm from "@/components/MobileStickyForm";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -56,17 +54,12 @@ export default function Home({ events = [] }: HomeProps) {
         {/* Section 5: Bagan Event Terkini, Akan Datang & Arsip Semakin Pede */}
         <EventSection initialEvents={events} />
 
-        {/* Section 6: Trading Journal & Risk Discipline Heatmap */}
-        <TradingJournal />
-
         {/* Section 7: Official Regulated Broker (TPFX & BAPPEBTI Standards) */}
         <BrokerRecommendation />
 
         {/* Section 8: FAQ & Public Inquiries */}
         <FAQSection />
 
-        {/* Section 9: Community Culture & Real Member Discussions */}
-        <Testimonials />
       </main>
 
       {/* Section 10: Footer & Disclaimers */}

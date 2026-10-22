@@ -220,7 +220,7 @@ export async function insertLeadDB(lead: DBLead): Promise<void> {
       if ((window as any).axios) {
         await (window as any).axios.post("/api/leads", lead);
       } else {
-        await fetch("/api/leads", {
+        const response = await fetch("/api/leads", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -228,10 +228,14 @@ export async function insertLeadDB(lead: DBLead): Promise<void> {
           },
           body: JSON.stringify(lead),
         });
+        if (!response.ok) {
+          throw new Error("Data dan berkas belum tersimpan di server. Silakan coba kirim kembali.");
+        }
       }
     }
   } catch (err) {
     console.warn("Gagal sinkronisasi lead ke server Laravel:", err);
+    throw err;
   }
 }
 

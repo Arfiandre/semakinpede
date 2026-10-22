@@ -74,6 +74,44 @@ export default function CompetitionParticipantsManager({
     subtitle?: string;
   } | null>(null);
 
+  const [fileError, setFileError] = useState("");
+  const [isDownloading, setIsDownloading] = useState(false);
+  const previewUrl = previewImage && (
+    /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(previewImage.url) ||
+    /^https?:\/\//i.test(previewImage.url) ||
+    /^\/(?!\/)/.test(previewImage.url)
+  ) ? previewImage.url : null;
+
+  useEffect(() => {
+    setFileError("");
+  }, [previewImage]);
+
+  const downloadPreview = async () => {
+    if (!previewUrl || !previewImage || isDownloading) return;
+    setIsDownloading(true);
+    setFileError("");
+
+    try {
+      const response = await fetch(previewUrl);
+      if (!response.ok) throw new Error("File tidak tersedia.");
+      const blob = await response.blob();
+      if (!blob.type.startsWith("image/")) throw new Error("Berkas bukan gambar.");
+      const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${previewImage.title.replace(/[^\p{L}\p{N} -]/gu, "").trim() || "bukti-upload"}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch {
+      setFileError("File gagal diunduh. Periksa koneksi dan ketersediaan file, lalu coba lagi.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   // State for Detail Modal
   const [detailItem, setDetailItem] = useState<ParticipantItem | null>(null);
 
@@ -870,25 +908,37 @@ export default function CompetitionParticipantsManager({
             </div>
 
             <div className="p-4 bg-slate-950 flex items-center justify-center max-h-[75vh] overflow-auto">
-              {previewImage.url.startsWith("data:") || previewImage.url.startsWith("http") ? (
-                // eslint-disable-next-line @next/next/no-img-element
+              {previewUrl ? (
                 <img
-                  src={previewImage.url}
+                  src={previewUrl}
                   alt={previewImage.title}
+                  onError={() => setFileError("Preview gagal dimuat. File mungkin sudah tidak tersedia di server.")}
                   className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md"
                 />
               ) : (
                 <div className="p-12 text-center text-slate-400">
                   <ImageIcon className="w-12 h-12 mx-auto mb-2 text-slate-600" />
                   <p className="text-xs">
-                    File tercatat sebagai nama:{" "}
+                    Hanya nama file yang tersimpan; isi file perlu diunggah ulang:{" "}
                     <strong className="text-white font-mono">{previewImage.url}</strong>
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+            {fileError && <p role="alert" className="px-4 py-2 text-sm text-rose-700">{fileError}</p>}
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+              {previewUrl && (
+                <button
+                  type="button"
+                  onClick={downloadPreview}
+                  disabled={isDownloading}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4" />
+                  {isDownloading ? "Mengunduh..." : "Unduh File"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setPreviewImage(null)}

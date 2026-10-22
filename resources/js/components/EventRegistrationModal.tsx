@@ -10,7 +10,6 @@ import {
   Upload,
   Image as ImageIcon,
   MessageCircle,
-  Send,
   Lock,
   Eye,
   EyeOff,
@@ -98,10 +97,8 @@ export default function EventRegistrationModal({
   const rawWa = siteSettings?.socialMedia?.whatsapp || "https://wa.me/628176792110";
   const adminWaUrl = rawWa.startsWith("http") ? rawWa : `https://wa.me/${rawWa.replace(/[^0-9]/g, "")}`;
 
-  const telegramLink =
-    event.telegramGroupUrl?.trim() ||
-    siteSettings?.socialMedia?.telegram ||
-    "https://t.me/semakinpede_official";
+  const whatsappGroupLink =
+    "https://chat.whatsapp.com/Eus8VPcBtyg3GKxhezvtuD?s=sh&p=a&mlu=4&ilr=4";
 
   const tutorialLink =
     event.tutorialAccountUrl?.trim() ||
@@ -250,8 +247,8 @@ export default function EventRegistrationModal({
         hasAccount: "sudah",
         demoAccountNumber: cleanedDemoAcc,
         demoInvestorPassword: demoInvestorPassword.trim(),
-        screenshotRealAccount: screenshotRealName,
-        screenshotTransfer: screenshotTransferName,
+        screenshotRealAccount,
+        screenshotTransfer,
       };
 
       await insertLeadDB(leadFull);
@@ -747,7 +744,7 @@ export default function EventRegistrationModal({
             </form>
           )}
 
-          {/* STEP 3: MODAL NOTIFIKASI REGISTRASI BERHASIL & LINK TELEGRAM */}
+          {/* STEP 3: MODAL NOTIFIKASI REGISTRASI BERHASIL & LINK WHATSAPP */}
           {currentStep === "step3_final_success" && (
             <div className="space-y-5 text-center sm:text-left py-2">
               <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-center sm:items-start gap-3.5">
@@ -764,15 +761,15 @@ export default function EventRegistrationModal({
                 </div>
               </div>
 
-              {/* Kartu Khusus Link Grup Telegram */}
+              {/* Kartu Khusus Link Grup WhatsApp */}
               <div className="p-5 rounded-xl bg-gradient-to-br from-sky-900 to-slate-900 text-white border border-sky-800/80 shadow-md space-y-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                    <Send className="w-5 h-5 -rotate-12" />
+                    <MessageCircle className="w-5 h-5" />
                   </div>
                   <div>
                     <h5 className="font-bold text-sm text-white">
-                      Grup Telegram Resmi Peserta Event
+                      Grup WhatsApp Peserta Event
                     </h5>
                     <span className="text-[11px] text-sky-200">
                       Ruang Koordinasi & Saluran Materi
@@ -781,18 +778,18 @@ export default function EventRegistrationModal({
                 </div>
 
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Semua arahan teknis, link live webinar, serta pembaruan leaderboard kompetisi akan dibagikan langsung di dalam grup Telegram khusus peserta ini.
+                  Bergabung ke grup WhatsApp peserta untuk mengikuti koordinasi acara.
                 </p>
 
                 <div className="pt-1">
                   <a
-                    href={telegramLink}
+                    href={whatsappGroupLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-sky-500 hover:bg-sky-400 active:scale-[0.99] text-white font-extrabold text-sm transition-all shadow-md hover:shadow-sky-500/25"
                   >
-                    <Send className="w-4 h-4" />
-                    <span>Gabung Grup Telegram Sekarang</span>
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Gabung Grup WhatsApp</span>
                     <ExternalLink className="w-3.5 h-3.5 text-sky-100" />
                   </a>
                 </div>
