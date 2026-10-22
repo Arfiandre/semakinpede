@@ -380,7 +380,9 @@ server {
 
     error_page 404 /index.php;
 
-    location ~ \.php$ {
+    include /var/www/semakinpede/bootstrap/nginx-security.conf;
+
+    location = /index.php {
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
@@ -438,7 +440,9 @@ server {
 
     error_page 404 /index.php;
 
-    location ~ \.php$ {
+    include /var/www/semakinpede/bootstrap/nginx-security.conf;
+
+    location = /index.php {
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;

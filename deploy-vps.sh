@@ -44,6 +44,9 @@ if [ "$(git branch --show-current)" != "main" ] || [ -n "$(git status --porcelai
     exit 1
 fi
 
+echo "Memeriksa patch keamanan PHP CLI sebelum deployment..."
+php artisan app:php-security-check --no-interaction
+
 echo "Memeriksa update Git sebelum maintenance..."
 git fetch origin main
 if ! git merge-base --is-ancestor HEAD origin/main; then
